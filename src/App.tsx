@@ -23,7 +23,6 @@ export default function App() {
   const [isMobile, setIsMobile] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [interactionNeeded, setInteractionNeeded] = useState(true);
-  const [fsError, setFsError] = useState<string | null>(null);
   const [isSmallLandscape, setIsSmallLandscape] = useState(false);
 
   const getMobileStatus = useCallback(() => {
@@ -67,7 +66,6 @@ export default function App() {
         doc.msFullscreenElement
       );
       setIsFullscreen(isFS);
-      if (isFS) setFsError(null);
     };
 
     setIsMobile(getMobileStatus());
@@ -91,62 +89,18 @@ export default function App() {
     };
   }, [getMobileStatus]);
 
-  const handleInteraction = async () => {
+  // One tap always starts. Fullscreen/orientation are best-effort, silent and non-blocking.
+  const handleInteraction = () => {
     soundService.play('click');
-    setFsError(null);
-
-    const ua = navigator.userAgent;
-    const isIOS = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
     window.scrollTo(0, 0);
-
+    setInteractionNeeded(false);
     try {
-      if (voiceCommandService.isSupported()) {
-        await voiceCommandService.requestPermission();
-      }
-    } catch (e) {
-      console.warn("Mic permission failed", e);
-    }
-
-    if (isIOS) {
-      setInteractionNeeded(false);
-      return;
-    }
-
-    const targets = [
-      document.documentElement,
-      document.body,
-      document.querySelector('#root')
-    ].filter(Boolean) as HTMLElement[];
-
-    let success = false;
-    for (const target of targets) {
-      const elem = target as any;
-      const requestFS = elem.requestFullscreen || 
-                        elem.webkitRequestFullscreen || 
-                        elem.webkitRequestFullScreen ||
-                        elem.mozRequestFullScreen || 
-                        elem.msRequestFullscreen;
-      
-      if (requestFS) {
-        try {
-          if (isMobile) await new Promise(r => setTimeout(r, 100));
-          const res = requestFS.call(elem);
-          if (res instanceof Promise) await res;
-          success = true;
-          break;
-        } catch (err) {
-          console.warn("Target FS failed", err);
-        }
-      }
-    }
-
-    if (success || fsError) {
-      document.body.style.overflow = 'hidden';
-      setInteractionNeeded(false);
-    } else {
-      setFsError("Fullscreen failed. Best experience in Chrome/Brave. Tap again to play anyway.");
-    }
+      const el = document.documentElement as any;
+      const req = el.requestFullscreen || el.webkitRequestFullscreen || el.webkitRequestFullScreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+      const r = req && req.call(el);
+      if (r && typeof r.catch === 'function') r.catch(() => {});
+    } catch { /* ignore */ }
+    try { if (voiceCommandService.isSupported()) Promise.resolve(voiceCommandService.requestPermission()).catch(() => {}); } catch { /* ignore */ }
   };
   const phase = useGameStore((state) => state.phase);
   const players = useGameStore((state) => state.players);
@@ -297,15 +251,6 @@ export default function App() {
               </div>
             </motion.button>
             
-            {fsError && (
-              <motion.p 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-6 text-red-500 text-[12px] font-bold uppercase tracking-widest bg-red-500/10 border border-red-500/20 px-6 py-2 rounded-full"
-              >
-                {fsError}
-              </motion.p>
-            )}
 
             <div className="mt-8 flex flex-col items-center gap-1 pointer-events-none">
               <div className="flex items-center gap-2 text-zinc-500">

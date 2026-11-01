@@ -18,6 +18,15 @@ interface LandingPageProps {
   onStart: (opponents: number, startingChips: number, difficulty: GameDifficulty, names: string[], design: string, enableInsights: boolean, settings: GameSettings) => void;
 }
 
+/** Custom player names (only what the user typed) — separate key so other saved settings are untouched. */
+const NAMES_KEY = 'rivers-edge-names';
+function loadNames(): { user?: string; bots?: string[] } {
+  try { return JSON.parse(localStorage.getItem(NAMES_KEY) || '{}') || {}; } catch { return {}; }
+}
+function saveNames(patch: { user?: string; bots?: string[] }) {
+  try { localStorage.setItem(NAMES_KEY, JSON.stringify({ ...loadNames(), ...patch })); } catch { /* ignore */ }
+}
+
 function Section({ title, hint, children, id }: { title: string; hint?: string; children: ReactNode; id: string }) {
   return (
     <section data-testid={`lp-${id}`} className="saloon-plate rounded-2xl p-3.5 flex flex-col gap-3">
@@ -35,8 +44,9 @@ export function LandingPage({ onStart }: LandingPageProps) {
   const [opponents, setOpponents] = useState(3);
   const [chips, setChips] = useState(10000);
   const [difficulty, setDifficulty] = useState<GameDifficulty>('medium');
-  const [userName, setUserName] = useState("Player 1");
+  const [userName, setUserNameRaw] = useState<string>(() => loadNames().user || "Player 1");
   const [botNames, setBotNames] = useState<string[]>([]);
+  const setUserName = (v: string) => { setUserNameRaw(v); saveNames({ user: v }); };
   const [cardDesign, setCardDesign] = useState("classic-red");
   const [showTutorial, setShowTutorial] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -209,9 +219,16 @@ export function LandingPage({ onStart }: LandingPageProps) {
 
   useEffect(() => {
     // Randomize initial bot names
-    const shuffled = [...BOT_NAMES].sort(() => 0.5 - Math.random());
-    setBotNames(shuffled.slice(0, 5));
+    const saved = loadNames().bots;
+    const shuffled = [...BOT_NAMES].sort(() => 0.5 - Math.random()).slice(0, 5);
+    setBotNames(shuffled.map((n, i) => saved?.[i] || n));
   }, []);
+
+  const resetNames = () => {
+    try { localStorage.removeItem(NAMES_KEY); } catch { /* ignore */ }
+    setUserNameRaw("Player 1");
+    setBotNames([...BOT_NAMES].sort(() => 0.5 - Math.random()).slice(0, 5));
+  };
 
   const handleStart = () => {
     soundService.play('click');
@@ -223,6 +240,7 @@ export function LandingPage({ onStart }: LandingPageProps) {
     const newNames = [...botNames];
     newNames[index] = name;
     setBotNames(newNames);
+    saveNames({ bots: newNames });
   };
 
   const toggleSetting = (key: keyof GameSettings) => {
@@ -334,9 +352,12 @@ export function LandingPage({ onStart }: LandingPageProps) {
             </button>
           ))}
         </div>
-        <button onClick={tap(() => setShowNames(v => !v))} className="self-start min-h-[40px] text-[13px] font-semibold text-[#e9c46a] underline-offset-4 underline">
-          {showNames ? 'Done renaming' : 'Rename opponents'}
-        </button>
+        <div className="flex items-center justify-between gap-3">
+          <button onClick={tap(() => setShowNames(v => !v))} className="min-h-[40px] text-[13px] font-semibold text-[#e9c46a] underline-offset-4 underline">
+            {showNames ? 'Done renaming' : 'Rename opponents'}
+          </button>
+          <button data-testid="lp-reset-names" onClick={tap(resetNames)} className="min-h-[40px] px-3 rounded-lg saloon-btn-ghost text-[12px] font-semibold flex items-center gap-1.5"><RotateCcw className="w-3.5 h-3.5" />Reset names</button>
+        </div>
         {showNames && (
           <div className="grid grid-cols-2 gap-2">
             {Array.from({ length: opponents }).map((_, i) => (
