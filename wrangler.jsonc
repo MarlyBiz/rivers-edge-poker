@@ -1,0 +1,9 @@
+{
+  // Cloudflare static hosting: serves the Vite build output (npm run build -> dist/)
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "rivers-edge-poker",
+  "compatibility_date": "2026-10-31",
+  "assets": { "directory": "./dist", "not_found_handling": "single-page-application" },
+  "routes": [{ "pattern": "poker.marlylabs.app", "custom_domain": true }],
+  "workers_dev": false
+}

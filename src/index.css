@@ -1,0 +1,306 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:wght@700&display=swap');
+@import "tailwindcss";
+
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-serif: "Playfair Display", serif;
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-sm: calc(var(--radius) * 0.6);
+
+  --breakpoint-xs: 400px;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes accordion-down {
+    from { height: 0; }
+    to { height: var(--radix-accordion-content-height); }
+  }
+  @keyframes accordion-up {
+    from { height: var(--radix-accordion-content-height); }
+    to { height: 0; }
+  }
+}
+
+@layer base {
+  :root {
+    --background: #080808;
+    --foreground: #FFFFFF;
+    --card: #121212;
+    --card-foreground: #FFFFFF;
+    --popover: #121212;
+    --popover-foreground: #FFFFFF;
+    --primary: #d4af37;
+    --primary-foreground: #000000;
+    --secondary: #0d1f1b;
+    --secondary-foreground: #FFFFFF;
+    --muted: #1a1a1a;
+    --muted-foreground: #71717a;
+    --accent: #d4af37;
+    --accent-foreground: #000000;
+    --destructive: #450a0a;
+    --destructive-foreground: #fef2f2;
+    --border: rgba(255, 255, 255, 0.1);
+    --input: rgba(255, 255, 255, 0.05);
+    --ring: #d4af37;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden !important;
+    position: fixed;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE 10+ */
+  }
+
+  html::-webkit-scrollbar, 
+  body::-webkit-scrollbar,
+  #root::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overscroll-behavior: none;
+    touch-action: manipulation;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none !important;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+.table-felt {
+  background: radial-gradient(circle at center, #1a3a34 0%, #0d1f1b 100%);
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.6);
+}
+
+.poker-rail {
+  border: 12px solid #222222;
+  box-shadow: 0 0 120px rgba(0,0,0,0.9);
+}
+
+.card-shadow {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+.gold-glow {
+  text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+}
+
+.gold-glow-strong {
+  text-shadow: 0 0 20px rgba(212, 175, 55, 0.6);
+}
+
+.timer-bar {
+  background: linear-gradient(90deg, #d4af37, #f5e492);
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
+}
+
+.slider-thumb-glow [role="slider"] {
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.5) !important;
+  border-color: #d4af37 !important;
+}
+
+/* Make slider easier to grab on mobile */
+[role="slider"] {
+  width: 24px !important;
+  height: 24px !important;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  [role="slider"] {
+    width: 28px !important;
+    height: 28px !important;
+  }
+}
+
+@keyframes pulse-gold {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.animate-pulse-gold {
+  animation: pulse-gold 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.gold-border {
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.gold-gradient {
+  background: linear-gradient(135deg, #d4af37 0%, #f5d76e 50%, #b8860b 100%);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.2);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 175, 55, 0.5);
+}
+
+@keyframes laser-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.laser-border-wrap {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: destination-out;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.laser-border-wrap::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 150%;
+  height: 150%;
+  margin-top: -75%;
+  margin-left: -75%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0%,
+    transparent 40%,
+    rgba(212, 175, 55, 0.2) 60%,
+    #d4af37 80%,
+    transparent 100%
+  );
+  animation: laser-rotate 2s linear infinite;
+}
+
+@keyframes action-flash {
+  0% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.9); border-color: #f5e492; filter: brightness(1.5); }
+  100% { box-shadow: 0 0 40px 20px rgba(212, 175, 55, 0); border-color: inherit; filter: brightness(1); }
+}
+
+.player-action-flash {
+  animation: action-flash 0.6s ease-out forwards;
+}
+
+/* Community Cards Highlight & Standing Up Design */
+.community-card {
+  width: 6.5rem !important; /* Significantly larger on mobile screens */
+  height: 9.2rem !important;
+  transform: translateY(-5px) scale(1.15) !important; /* Appears to stand up off the table */
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.7), 0 6px 12px rgba(0, 0, 0, 0.45) !important; /* Deep 3D card shadow */
+  transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.25) !important;
+}
+
+@media (min-width: 768px) {
+  .community-card {
+    width: 7.2rem !important; /* Fits nicely in the standard desktop layout */
+    height: 10.0rem !important;
+    transform: translateY(-8px) scale(1.2) !important; /* Retain premium desk scaling & vertical lift */
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7), 0 8px 16px rgba(0, 0, 0, 0.45) !important;
+  }
+}
+
+/* Mobile Typography Overrides for Readability on Handheld Screens */
+@media (max-width: 640px) {
+  .player-name {
+    font-size: 0.9rem !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.05em !important;
+  }
+  
+  .player-balance {
+    font-size: 0.95rem !important;
+    font-weight: 900 !important;
+  }
+
+  .player-action-label {
+    font-size: 0.85rem !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.04em !important;
+  }
+
+  .main-pot-amount {
+    font-size: 1.45rem !important;
+    font-weight: 900 !important;
+    padding: 0.45rem 1.5rem !important;
+  }
+}

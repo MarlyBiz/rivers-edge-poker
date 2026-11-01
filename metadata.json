@@ -1,0 +1,6 @@
+{
+  "name": "RIVER'S EDGE POKER",
+  "description": "A premium, river-themed Texas Hold'em poker experience with a sleek professional design.",
+  "requestFramePermissions": ["microphone", "fullscreen"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
