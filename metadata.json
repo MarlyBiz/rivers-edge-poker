@@ -1,6 +1,6 @@
 {
   "name": "RIVER'S EDGE POKER",
-  "description": "Texas Hold'em at a saloon table. It all comes down to the river card — and everyone's on the edge.",
+  "description": "Texas Hold'em at a saloon table. It all comes down to the river card, and everyone's on the edge.",
   "requestFramePermissions": ["microphone", "fullscreen"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

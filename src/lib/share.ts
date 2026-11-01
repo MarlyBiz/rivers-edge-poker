@@ -2,7 +2,7 @@
 export const APP_URL = 'https://poker.marlylabs.app';
 export const SHARE_DATA = {
   title: "River's Edge Poker",
-  text: "Texas Hold'em at a saloon table. It all comes down to the river card — and everyone's on the edge.",
+  text: "Texas Hold'em at a saloon table. It all comes down to the river card, and everyone's on the edge.",
   url: APP_URL,
 };
 export type ShareResult = 'shared' | 'cancelled' | 'copied' | 'failed';
