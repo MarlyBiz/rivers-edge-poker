@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type 
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Mic, MicOff, Pause, Play, Menu, X, Volume2, VolumeX, Monitor, HelpCircle, Settings,
-  Maximize, Minimize, LogOut, ScrollText, FastForward, Zap, ChevronUp, Share2,
+  Maximize, Minimize, LogOut, ScrollText, FastForward, Zap, ChevronUp, Share2, RotateCcw,
 } from 'lucide-react';
 import { Card } from '../Card';
 import { ChipStack, ClayChip } from '../ChipStack';
@@ -32,6 +32,26 @@ const money = (n: number) => `$${(n || 0).toLocaleString()}`;
 const ACTION_LABEL: Record<string, string> = { fold: 'Folded', check: 'Check', call: 'Call', raise: 'Raise', 'all-in': 'All in' };
 
 /* ───────────────────────── Top bar + menu ───────────────────────── */
+
+/** Header full-screen toggle. Follows the real fullscreen state; hidden where the Fullscreen API is missing (iPhone Safari). */
+function FullscreenButton({ onToggle }: { onToggle: () => void }) {
+  const doc = document as any;
+  const supported = !!(doc.fullscreenEnabled || doc.webkitFullscreenEnabled);
+  const get = () => !!(doc.fullscreenElement || doc.webkitFullscreenElement);
+  const [fs, setFs] = useState(get);
+  useEffect(() => {
+    const on = () => setFs(get());
+    document.addEventListener('fullscreenchange', on);
+    document.addEventListener('webkitfullscreenchange', on);
+    return () => { document.removeEventListener('fullscreenchange', on); document.removeEventListener('webkitfullscreenchange', on); };
+  }, []);
+  if (!supported) return null;
+  return (
+    <button data-testid="btn-fullscreen" aria-label={fs ? 'Exit full screen' : 'Full screen'} title={fs ? 'Exit full screen' : 'Full screen'} onClick={onToggle} className="saloon-icon-btn">
+      {fs ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+    </button>
+  );
+}
 
 function TopBar({ ctx, t, onMenu }: { ctx: SaloonCtx; t: Tokens; onMenu: () => void }) {
   const micBlocked = ctx.voiceStatus === 'permission-denied';
@@ -65,6 +85,7 @@ function TopBar({ ctx, t, onMenu }: { ctx: SaloonCtx; t: Tokens; onMenu: () => v
           className={`saloon-icon-btn ${ctx.isPaused ? '!bg-[#e9c46a] !text-black' : ''}`}>
           {ctx.isPaused ? <Play className="w-5 h-5 fill-current" /> : <Pause className="w-5 h-5 fill-current" />}
         </button>
+        <FullscreenButton onToggle={ctx.toggleFullscreen} />
         <button data-testid="btn-menu" aria-label="Open menu" onClick={onMenu} className="saloon-icon-btn">
           <Menu className="w-5 h-5" />
         </button>
@@ -104,6 +125,7 @@ function MenuSheet({ ctx, t, onClose, onLog }: { ctx: SaloonCtx; t: Tokens; onCl
         {item('help', <HelpCircle />, 'How to play', ctx.openHowToPlay)}
         {item('fullscreen', ctx.isFullscreen ? <Minimize /> : <Maximize />, ctx.isFullscreen ? 'Exit full screen' : 'Full screen', ctx.toggleFullscreen)}
         <div className="h-px bg-white/10 my-1" />
+        {item('newgame', <RotateCcw />, 'New game', ctx.forfeit)}
         {item('forfeit', <LogOut />, 'Forfeit and leave', ctx.forfeit, true)}
       </motion.div>
     </>

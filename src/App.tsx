@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { voiceCommandService } from './services/voiceCommandService';
 import { soundService } from './services/soundService';
 import { AppActions } from './components/AppActions';
+import { showShareToast } from './lib/share';
 
 export default function App() {
   const [isPortrait, setIsPortrait] = useState(() => {
@@ -22,7 +23,8 @@ export default function App() {
   });
   const [isMobile, setIsMobile] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [interactionNeeded, setInteractionNeeded] = useState(true);
+  // A restored game skips the splash and lands on the table.
+  const [interactionNeeded, setInteractionNeeded] = useState(() => useGameStore.getState().phase === 'setup');
   const [isSmallLandscape, setIsSmallLandscape] = useState(false);
 
   const getMobileStatus = useCallback(() => {
@@ -66,6 +68,7 @@ export default function App() {
         doc.msFullscreenElement
       );
       setIsFullscreen(isFS);
+      if (isFS) setTimeout(() => showShareToast(useGameStore.getState().phase === 'setup' ? 'To exit full screen, tap Exit full under Deal me in.' : 'To exit full screen, tap the corner-arrows button at the top right, next to Pause.'), 2600);
     };
 
     setIsMobile(getMobileStatus());

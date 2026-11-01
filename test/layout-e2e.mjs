@@ -76,7 +76,7 @@ const measure = (p) => p.evaluate(() => {
   const items = [];
   const add = (name, el) => el && items.push({ name, rect: r(el) });
   document.querySelectorAll('[data-testid=seat]').forEach(s => add(`seat ${s.dataset.name}`, s));
-  ['pot', 'board', 'ticker', 'hero-plate', 'hero-stack', 'action-panel', 'topbar'].forEach(id => document.querySelectorAll(`[data-testid=${id}]`).forEach(e => add(id, e)));
+  ['pot', 'board', 'ticker', 'hero-plate', 'hero-stack', 'action-panel', 'btn-mic', 'btn-pause', 'btn-fullscreen', 'btn-menu'].forEach(id => document.querySelectorAll(`[data-testid=${id}]`).forEach(e => add(id, e)));
   const offscreen = items.filter(i => i.rect.x < 0 || i.rect.y < 0 || i.rect.x + i.rect.w > vw + 0.5 || i.rect.y + i.rect.h > vh + 0.5)
     .map(i => ({ ...i, left: Math.max(0, -i.rect.x), top: Math.max(0, -i.rect.y), right: Math.max(0, i.rect.x + i.rect.w - vw), bottom: Math.max(0, i.rect.y + i.rect.h - vh) }));
   const overlaps = [];
