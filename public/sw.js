@@ -1,6 +1,6 @@
 /** River's Edge Poker - offline service worker (network-first pages, stale-while-revalidate assets). */
-const CACHE_NAME = 'rivers-edge-v1.1.0';
-const PRECACHE_ASSETS = ['/', '/index.html', '/manifest.json', '/icon.svg', '/apple-touch-icon.png', '/pwa-192x192.png', '/pwa-512x512.png', '/pwa-maskable-512x512.png', '/textures/felt-noise.svg', '/textures/wood-grain.svg'];
+const CACHE_NAME = 'rivers-edge-v1.1.1';
+const PRECACHE_ASSETS = ['/', '/index.html', '/manifest.json', '/icon.svg', '/apple-touch-icon.png', '/pwa-192x192.png', '/pwa-512x512.png', '/pwa-maskable-512x512.png', '/textures/felt-noise.svg', '/textures/wood-grain.svg', '/sounds/round-end.mp3', '/sounds/round-end.ogg'];
 
 self.addEventListener('install', event => {
   self.skipWaiting();

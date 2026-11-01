@@ -162,6 +162,9 @@ export default function App() {
   const actionLog = useGameStore((state) => state.actionLog);
   const [wakeLock, setWakeLock] = useState<any>(null);
 
+  // Mute: the saved "Sound effects" setting drives the sound service.
+  useEffect(() => { soundService.toggleSfx(settings.soundEffects !== false); }, [settings.soundEffects]);
+
   // Screen Wake Lock implementation
   useEffect(() => {
     let wakeLockSentinel: any = null;

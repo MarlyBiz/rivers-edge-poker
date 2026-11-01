@@ -1,15 +1,8 @@
+// Effect names. All effects are synthesized locally except the end-of-round clip,
+// which is a self-hosted file (public/sounds/round-end.*). No remote audio.
 const SOUND_URLS = {
-  click: "https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3",
-  shuffle: "https://assets.mixkit.co/active_storage/sfx/1124/1124-preview.mp3",
-  card: "https://assets.mixkit.co/active_storage/sfx/1119/1119-preview.mp3",
-  fold: "https://assets.mixkit.co/active_storage/sfx/1119/1119-preview.mp3",
-  check: "https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3",
-  chips: "https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3",
-  collect: "https://assets.mixkit.co/active_storage/sfx/2592/2592-preview.mp3",
-  deal: "https://assets.mixkit.co/active_storage/sfx/1122/1122-preview.mp3",
-  tick: "https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3",
-  win: "https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3",
-  pop: "https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3", // Satisfying fallback
+  click: '', shuffle: '', card: '', fold: '', check: '', chips: '',
+  collect: '/sounds/round-end', deal: '', tick: '', win: '/sounds/round-end', pop: '',
 };
 
 type SoundEffect = keyof typeof SOUND_URLS;
@@ -30,14 +23,19 @@ class WebAudioSFX {
     return this.ctx;
   }
 
+  context() { return this.getContext(); }
+
   play(effect: SoundEffect, volume: number) {
     try {
       const ctx = this.getContext();
       if (!ctx) return false;
 
       const masterVolume = ctx.createGain();
-      masterVolume.gain.setValueAtTime(volume * 0.45, ctx.currentTime);
+      // Ramp in over 4ms: an instant jump to full gain produces an audible click.
+      masterVolume.gain.setValueAtTime(0, ctx.currentTime);
+      masterVolume.gain.linearRampToValueAtTime(volume * 0.45, ctx.currentTime + 0.004);
       masterVolume.connect(ctx.destination);
+      setTimeout(() => { try { masterVolume.disconnect(); } catch {} }, 1500);
 
       const now = ctx.currentTime;
 
@@ -225,23 +223,6 @@ class WebAudioSFX {
           }
           break;
         }
-        case 'win': {
-          const notes = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99, 1046.50];
-          notes.forEach((freq, idx) => {
-            const t = now + idx * 0.07;
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(freq, t);
-            gain.gain.setValueAtTime(0.22, t);
-            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
-            osc.connect(gain);
-            gain.connect(masterVolume);
-            osc.start(t);
-            osc.stop(t + 0.29);
-          });
-          break;
-        }
       }
       return true;
     } catch (e) {
@@ -251,41 +232,80 @@ class WebAudioSFX {
   }
 }
 
+/**
+ * End-of-round sound: one self-hosted, pre-encoded clip (public/sounds/round-end.{ogg,mp3},
+ * 44.1 kHz mono, peak -3 dBFS) decoded once into an AudioBuffer and played through a single
+ * gain node. Guarded so the store's 'collect' and the table's 'win' (fired a moment apart at
+ * showdown) produce exactly one playback.
+ */
+class RoundEndSound {
+  private buffer: AudioBuffer | null = null;
+  private loading: Promise<void> | null = null;
+  private fallback: HTMLAudioElement | null = null;
+  private lastPlayed = 0;
+  plays = 0;
+
+  private url() {
+    const a = typeof document !== 'undefined' ? document.createElement('audio') : null;
+    return a && a.canPlayType('audio/ogg; codecs="vorbis"') ? '/sounds/round-end.ogg' : '/sounds/round-end.mp3';
+  }
+
+  preload(ctx: AudioContext | null) {
+    if (this.buffer || this.loading || !ctx) return;
+    this.loading = fetch(this.url())
+      .then(r => r.arrayBuffer())
+      .then(data => new Promise<AudioBuffer>((res, rej) => ctx.decodeAudioData(data, res, rej)))
+      .then(buf => { this.buffer = buf; })
+      .catch(() => { this.loading = null; });
+  }
+
+  play(ctx: AudioContext | null, volume: number) {
+    const now = Date.now();
+    if (now - this.lastPlayed < 2500) return; // never double-trigger
+    this.lastPlayed = now;
+    this.plays++;
+    if (ctx && this.buffer) {
+      const src = ctx.createBufferSource();
+      const g = ctx.createGain();
+      g.gain.value = Math.min(1, volume * 1.4);
+      src.buffer = this.buffer;
+      src.connect(g);
+      g.connect(ctx.destination);
+      src.onended = () => { src.disconnect(); g.disconnect(); };
+      src.start();
+      return;
+    }
+    // Not decoded yet (first hand / no Web Audio): one preloaded element, restarted.
+    this.preload(ctx);
+    if (!this.fallback) { this.fallback = new Audio(this.url()); this.fallback.preload = 'auto'; }
+    this.fallback.volume = Math.min(1, volume * 1.4);
+    this.fallback.currentTime = 0;
+    this.fallback.play().catch(() => {});
+  }
+}
+
 class SoundService {
-  private audios: Partial<Record<SoundEffect, HTMLAudioElement>> = {};
   private sfxEnabled: boolean = true;
   private sfxVolume: number = 0.5;
   private synthSFX = new WebAudioSFX();
+  roundEnd = new RoundEndSound();
 
   constructor() {
-    // Enable by default unless toggled off
     this.sfxEnabled = true;
     this.sfxVolume = 0.5;
   }
 
   play(effect: SoundEffect) {
     if (!this.sfxEnabled) return;
-
-    // 1st Priority: Always trigger the high-fidelity synthesized Web Audio engine
-    // to guarantee latency-free, self-contained playability.
-    const playedSynth = this.synthSFX.play(effect, this.sfxVolume);
-
-    // 2nd Priority: Load and play real assets in parallel if Web Audio isn't sufficient
-    // or if the user override has valid URLs.
-    try {
-      let audio = this.audios[effect];
-      if (!audio) {
-        audio = new Audio(SOUND_URLS[effect]);
-        this.audios[effect] = audio;
-      }
-      audio.volume = this.sfxVolume;
-      audio.currentTime = 0;
-      audio.play().catch(() => {
-        // Safe check for browser interaction rules - no-op if autoplay blocks
-      });
-    } catch {
-      // Fail silently, synthesized audio handles the playback fallback flawlessly
+    if (effect === 'win' || effect === 'collect') {
+      const ctx = this.synthSFX.context();
+      this.roundEnd.play(ctx, this.sfxVolume);
+      return;
     }
+    // Synthesized Web Audio only. (Previously every effect ALSO started a hot-linked
+    // remote preview MP3 at the same moment, so each sound played twice, out of sync.)
+    this.synthSFX.play(effect, this.sfxVolume);
+    this.roundEnd.preload(this.synthSFX.context());
   }
 
   toggleSfx(enabled: boolean) {
@@ -293,16 +313,7 @@ class SoundService {
     this.sfxVolume = enabled ? 0.5 : 0;
   }
 
-  stopAll() {
-    Object.values(this.audios).forEach(audio => {
-      try {
-        if (audio) {
-          audio.pause();
-          audio.currentTime = 0;
-        }
-      } catch {}
-    });
-  }
+  stopAll() {}
 
   // Backward compatibility
   toggle(enabled: boolean) {
@@ -311,3 +322,4 @@ class SoundService {
 }
 
 export const soundService = new SoundService();
+if (typeof window !== 'undefined') (window as any).__rivSound = soundService;

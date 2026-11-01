@@ -10,6 +10,7 @@ import { Slider } from '../ui/slider';
 import type { Player } from '../../types';
 import { getTokens, tokenStyle, seatSlots, boardCenterY, type Tokens, type Pt } from './layout';
 import type { SaloonCtx } from './types';
+import { useSeatCaptions, CAPTION_COLOR, type Caption } from './captions';
 
 function useSize(ref: RefObject<HTMLElement | null>) {
   const [size, setSize] = useState({ w: 0, h: 0 });
@@ -136,7 +137,7 @@ function LogSheet({ ctx, onClose }: { ctx: SaloonCtx; onClose: () => void }) {
 
 /* ───────────────────────── Table: felt, seats, pot, board ───────────────────────── */
 
-function Seat({ ctx, p, idx, pt, t }: { ctx: SaloonCtx; p: Player; idx: number; pt: Pt; t: Tokens; key?: string }) {
+function Seat({ ctx, p, idx, pt, t, cap }: { ctx: SaloonCtx; p: Player; idx: number; pt: Pt; t: Tokens; cap?: Caption; key?: string }) {
   const isCurrent = ctx.currentPlayerIndex === idx && !ctx.isShowdown && !ctx.isPaused;
   const isWinner = ctx.isShowdown && ctx.winners.includes(p.id);
   const faceUp = !p.isFolded && !p.isEliminated && (ctx.isShowdown || ctx.isAllInSituation);
@@ -150,9 +151,10 @@ function Seat({ ctx, p, idx, pt, t }: { ctx: SaloonCtx; p: Player; idx: number; 
     <div
       data-testid="seat"
       data-name={p.name}
-      className={`absolute z-[40] flex items-center gap-1.5 rounded-xl px-1.5 saloon-plate ${isCurrent || isWinner ? 'saloon-plate-active' : ''} ${p.isFolded || p.isEliminated ? 'opacity-55' : ''} ${ctx.flashingPlayerId === p.id ? 'player-action-flash' : ''} ${cardsOnRight ? 'flex-row-reverse' : 'flex-row'}`}
+      className={`absolute z-[40] flex flex-col justify-center rounded-xl px-1.5 py-1 saloon-plate ${isCurrent || isWinner ? 'saloon-plate-active' : ''} ${p.isFolded || p.isEliminated ? 'opacity-55' : ''} ${ctx.flashingPlayerId === p.id ? 'player-action-flash' : ''}`}
       style={{ left: pt.x - t.seatW / 2, top: pt.y - t.seatH / 2, width: t.seatW, height: t.seatH }}
     >
+     <div className={`flex items-center gap-1.5 min-h-0 ${cardsOnRight ? 'flex-row-reverse' : 'flex-row'}`}>
       <div data-testid="seat-cards" className="relative flex shrink-0 items-center" style={{ height: t.card[size].h }}>
         {p.isEliminated ? null : p.cards.map((c, ci) => (
           <div key={ci} style={{ marginLeft: ci > 0 ? -overlap : 0, transform: `rotate(${ci === 0 ? -4 : 4}deg)` }}>
@@ -171,18 +173,30 @@ function Seat({ ctx, p, idx, pt, t }: { ctx: SaloonCtx; p: Player; idx: number; 
       <div className={`flex flex-col min-w-0 flex-1 leading-tight ${cardsOnRight ? 'items-end text-right' : 'items-start text-left'}`}>
         <span data-testid="seat-name" className={`${lg ? 'text-[15px]' : 'text-[13px]'} font-extrabold uppercase tracking-[0.03em] truncate max-w-full ${isCurrent || isWinner ? 'text-[#e9c46a]' : 'text-[#f4ecd8]'}`}>{p.name}</span>
         <span data-testid="seat-chips" className={`${lg ? 'text-[15px]' : 'text-[13px]'} font-mono font-bold text-[#cfe3c6] tabular-nums`}>{money(p.chips)}</span>
-        <span className={`${lg ? 'text-[13px]' : 'text-[12px]'} font-bold flex items-center gap-1 h-[16px] whitespace-nowrap`}>
-          {status ? <span className="text-[#c9b48a] uppercase">{status}</span>
-            : p.currentBet > 0 ? (<><ClayChip px={13} color="#a8322d" /><span data-testid="seat-bet" className="text-[#e9c46a] tabular-nums">{money(p.currentBet)}</span></>)
-            : p.lastAction ? <span className="text-[#c9b48a] uppercase">{ACTION_LABEL[p.lastAction] || p.lastAction}</span>
-            : isCurrent ? <span className="text-[#e9c46a]">Thinking…</span> : null}
-        </span>
       </div>
+     </div>
+     <SeatCaption cap={cap} status={status} isCurrent={isCurrent} bet={p.currentBet} lg={lg} />
     </div>
   );
 }
 
-function TableArea({ ctx, t, areaRef, onLog }: { ctx: SaloonCtx; t: Tokens; areaRef: RefObject<HTMLDivElement | null>; onLog: () => void }) {
+function SeatCaption({ cap, status, isCurrent, bet, lg }: { cap?: Caption; status: string | null; isCurrent: boolean; bet: number; lg: boolean }) {
+  const cls = `${lg ? 'text-[14px]' : 'text-[12px]'} font-bold leading-[16px] h-[16px] mt-0.5 flex items-center justify-center gap-1 whitespace-nowrap overflow-hidden`;
+  if (cap && (cap.kind === 'winner' || !status || cap.kind === 'fold')) {
+    return (
+      <div data-testid="seat-caption" data-kind={cap.kind} className={`${cls} ${CAPTION_COLOR[cap.kind]} ${cap.kind === 'winner' ? 'uppercase tracking-wide' : ''}`}>
+        {(cap.kind === 'call' || cap.kind === 'raise' || cap.kind === 'bet' || cap.kind === 'blind' || cap.kind === 'allin') && <ClayChip px={12} />}
+        <span className="truncate">{cap.text}</span>
+      </div>
+    );
+  }
+  if (status) return <div data-testid="seat-caption" data-kind="status" className={`${cls} text-[#c9b48a] uppercase`}>{status}</div>;
+  if (bet > 0) return <div className={`${cls} text-[#e9c46a]`}><ClayChip px={12} />{money(bet)}</div>;
+  if (isCurrent) return <div className={`${cls} text-[#e9c46a]`}>Thinking…</div>;
+  return <div className={cls} />;
+}
+
+function TableArea({ ctx, t, areaRef, onLog, captions }: { ctx: SaloonCtx; t: Tokens; areaRef: RefObject<HTMLDivElement | null>; onLog: () => void; captions: Record<string, Caption | undefined> }) {
   const { w, h } = useSize(areaRef);
   const userIndex = Math.max(0, ctx.players.findIndex(p => p.isUser));
   const n = ctx.players.length;
@@ -264,7 +278,7 @@ function TableArea({ ctx, t, areaRef, onLog }: { ctx: SaloonCtx; t: Tokens; area
             </button>
           )}
 
-          {opponents.map((o, i) => slots[i] && <Seat key={o.p.id} ctx={ctx} p={o.p} idx={o.idx} pt={slots[i]} t={t} />)}
+          {opponents.map((o, i) => slots[i] && <Seat key={o.p.id} ctx={ctx} p={o.p} idx={o.idx} pt={slots[i]} t={t} cap={captions[o.p.id]} />)}
         </>
       )}
     </div>
@@ -299,7 +313,7 @@ function HeroStack({ ctx, t, onOpen }: { ctx: SaloonCtx; t: Tokens; onOpen: () =
   );
 }
 
-function HeroPlate({ ctx, t }: { ctx: SaloonCtx; t: Tokens }) {
+function HeroPlate({ ctx, t, cap }: { ctx: SaloonCtx; t: Tokens; cap?: Caption }) {
   const u = ctx.user;
   if (!u) return null;
   const lg = t.tier === 'lg';
@@ -309,7 +323,8 @@ function HeroPlate({ ctx, t }: { ctx: SaloonCtx; t: Tokens }) {
       <div className="flex items-center gap-1.5 min-w-0">
         {u.isDealer && <span className="w-5 h-5 shrink-0 rounded-full bg-[#f4ecd8] border-2 border-[#c9a45c] text-[12px] font-black text-[#1b1208] flex items-center justify-center" aria-label="Dealer">D</span>}
         <span className={`${lg ? 'text-[15px]' : 'text-[13px]'} font-extrabold uppercase truncate ${isCurrent ? 'text-[#e9c46a]' : 'text-[#f4ecd8]'}`}>{u.name}</span>
-        {u.currentBet > 0 && <span className="ml-auto flex items-center gap-1 text-[12px] font-bold text-[#e9c46a] whitespace-nowrap"><ClayChip px={13} />{money(u.currentBet)}</span>}
+        {cap ? <span data-testid="hero-caption" data-kind={cap.kind} className={`ml-auto text-[12px] font-bold whitespace-nowrap truncate ${CAPTION_COLOR[cap.kind]} ${cap.kind === 'winner' ? 'uppercase' : ''}`}>{cap.text}</span>
+          : u.currentBet > 0 && <span className="ml-auto flex items-center gap-1 text-[12px] font-bold text-[#e9c46a] whitespace-nowrap"><ClayChip px={13} />{money(u.currentBet)}</span>}
       </div>
       <span data-testid="hero-chips" className={`${lg ? 'text-[24px]' : 'text-[20px]'} font-mono font-extrabold text-[#cfe3c6] tabular-nums`}>{money(u.chips)}</span>
       {ctx.handLabel && <span data-testid="hand-label" className={`${lg ? 'text-[15px]' : 'text-[13px]'} font-bold text-[#e9c46a] uppercase line-clamp-2 leading-tight`}>{ctx.handLabel}</span>}
@@ -516,6 +531,7 @@ export function SaloonTable({ ctx, containerRef }: { ctx: SaloonCtx; containerRe
   const [raiseOpen, setRaiseOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
+  const captions = useSeatCaptions(ctx.players, ctx.logs, ctx.phase, ctx.winners);
 
   // Fan: collapse on a new hand, and when the turn clock is about to run out.
   useEffect(() => { setFanOpen(false); setRaiseOpen(false); }, [ctx.handCount]);
@@ -551,10 +567,10 @@ export function SaloonTable({ ctx, containerRef }: { ctx: SaloonCtx; containerRe
       {portrait ? (
         <>
           <div className="flex-1 min-h-0 flex px-1" style={{ pointerEvents: ctx.isPaused ? 'none' : 'auto' }}>
-            <TableArea ctx={ctx} t={t} areaRef={containerRef} onLog={() => setLogOpen(true)} />
+            <TableArea ctx={ctx} t={t} areaRef={containerRef} onLog={() => setLogOpen(true)} captions={captions} />
           </div>
           <div data-testid="hero-row" className="shrink-0 flex items-center gap-2 px-2 pt-2" style={{ paddingLeft: 'max(8px, env(safe-area-inset-left))', paddingRight: 'max(8px, env(safe-area-inset-right))' }}>
-            <HeroPlate ctx={ctx} t={t} />
+            <HeroPlate ctx={ctx} t={t} cap={captions[ctx.user?.id || '']} />
             <HeroStack ctx={ctx} t={t} onOpen={openFan} />
           </div>
           <div className="shrink-0 px-2 pt-1.5" style={{ paddingBottom: 'max(10px, env(safe-area-inset-bottom))', paddingLeft: 'max(8px, env(safe-area-inset-left))', paddingRight: 'max(8px, env(safe-area-inset-right))' }}>
@@ -564,13 +580,13 @@ export function SaloonTable({ ctx, containerRef }: { ctx: SaloonCtx; containerRe
       ) : (
         <div className="flex-1 min-h-0 flex">
           <div className="flex-1 min-w-0 flex" style={{ paddingLeft: 'env(safe-area-inset-left)', pointerEvents: ctx.isPaused ? 'none' : 'auto' }}>
-            <TableArea ctx={ctx} t={t} areaRef={containerRef} onLog={() => setLogOpen(true)} />
+            <TableArea ctx={ctx} t={t} areaRef={containerRef} onLog={() => setLogOpen(true)} captions={captions} />
           </div>
           <div data-testid="side-column" className="shrink-0 flex flex-col justify-between gap-2 py-1.5 pl-1"
             style={{ width: t.sideW, paddingRight: 'max(8px, env(safe-area-inset-right))', paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}>
             <div data-testid="hero-row" className="flex items-center gap-2">
               <HeroStack ctx={ctx} t={t} onOpen={openFan} />
-              <HeroPlate ctx={ctx} t={t} />
+              <HeroPlate ctx={ctx} t={t} cap={captions[ctx.user?.id || '']} />
             </div>
             <ActionPanel ctx={ctx} t={t} vertical onRaise={openRaise} />
           </div>

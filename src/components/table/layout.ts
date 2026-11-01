@@ -28,7 +28,7 @@ export function getTokens(w: number, h: number): Tokens {
     orient,
     tier,
     seatW: lg ? 176 : 132,
-    seatH: lg ? 72 : 56,
+    seatH: lg ? 88 : 70, // includes the last-action caption row
     topBarH: lg ? 56 : portrait ? 52 : 44,
     sideW: lg ? 340 : w < 760 ? 214 : 236,
     card: {
@@ -76,8 +76,10 @@ export function seatSlots(n: number, w: number, h: number, t: Tokens): Pt[] {
   const C = w / 2;
   const topY = t.seatH / 2 + m;
   const portrait = t.orient === 'portrait';
-  const hiY = Math.max(portrait ? h * 0.2 : h * 0.2, topY + t.seatH + 6);
-  const lowY = Math.min(portrait ? h * 0.82 : h * 0.8, h - t.seatH / 2 - m);
+  // Landscape: if three plates fit side by side, the upper side seats share the top row.
+  const topRowFits = !portrait && w >= 3 * t.seatW + 4 * m + 8;
+  const hiY = topRowFits ? topY : Math.max(h * 0.2, topY + t.seatH + 6);
+  const lowY = portrait ? Math.min(h * 0.82, h - t.seatH / 2 - m) : h - t.seatH / 2 - m;
   const top: Pt = { x: C, y: topY, side: 'top' };
   const lh: Pt = { x: L, y: hiY, side: 'left' };
   const rh: Pt = { x: R, y: hiY, side: 'right' };
@@ -94,5 +96,7 @@ export function seatSlots(n: number, w: number, h: number, t: Tokens): Pt[] {
 
 /** Vertical centre of the board row. */
 export function boardCenterY(h: number, t: Tokens) {
-  return t.orient === 'portrait' ? h * 0.5 : h * 0.52;
+  // Keep the pot (above the board) clear of the top seat.
+  const minY = 6 + t.seatH + 4 + t.potH + 6 + t.card.board.h / 2;
+  return Math.max(t.orient === 'portrait' ? h * 0.5 : h * 0.52, minY);
 }
