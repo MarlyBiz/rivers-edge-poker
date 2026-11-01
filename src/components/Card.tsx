@@ -114,12 +114,76 @@ export interface CardProps {
   className?: string;
   designOverride?: string;
   highlight?: boolean;
+  /** Explicit size. Dimensions and type come from the --card-<size>-* CSS variables
+   *  set by the table layout (SaloonTable), with px fallbacks. */
+  size?: CardSize;
   key?: React.Key;
 }
 
-export function Card({ card, hidden = false, className = "", designOverride, highlight = false }: CardProps) {
+export type CardSize = 'mini' | 'seat' | 'board' | 'hand' | 'fan';
+
+const SIZE_FALLBACK: Record<CardSize, [number, number, number, number]> = {
+  // w, h, rank px, suit px
+  mini: [24, 34, 12, 14],
+  seat: [36, 50, 14, 18],
+  board: [58, 82, 20, 30],
+  hand: [70, 98, 24, 32],
+  fan: [150, 210, 44, 72],
+};
+
+function sizeStyle(size: CardSize) {
+  const [w, h, r, s] = SIZE_FALLBACK[size];
+  return {
+    box: { width: `var(--card-${size}-w, ${w}px)`, height: `var(--card-${size}-h, ${h}px)` } as React.CSSProperties,
+    rank: { fontSize: `var(--card-${size}-rank, ${r}px)` } as React.CSSProperties,
+    suit: { fontSize: `var(--card-${size}-suit, ${s}px)` } as React.CSSProperties,
+  };
+}
+
+/** Paper-faced saloon card with an explicit size (no class-name sniffing). */
+function SizedCard({ card, hidden, size, className, design, highlight }: { card?: CardType; hidden: boolean; size: CardSize; className: string; design: string; highlight: boolean }) {
+  const st = sizeStyle(size);
+  const radius = size === 'mini' ? 3 : size === 'fan' ? 10 : 6;
+  if (hidden || !card) {
+    return (
+      <motion.div
+        initial={{ rotateY: 180, opacity: 0 }}
+        animate={{ rotateY: 0, opacity: 1 }}
+        data-card="back"
+        className={`relative overflow-hidden shrink-0 border border-black/40 card-shadow ${className}`}
+        style={{ ...st.box, borderRadius: radius }}
+      >
+        <CardBack design={design} />
+      </motion.div>
+    );
+  }
+  const isRed = card.suit === 'hearts' || card.suit === 'diamonds';
+  const color = isRed ? 'text-[#9b1c1c]' : 'text-[#1c1917]';
+  const compact = size === 'mini' || size === 'seat';
+  const corner = size === 'seat'; // rank+suit stacked top-left so overlapped cards stay readable
+  return (
+    <motion.div
+      initial={{ scale: 0.85, opacity: 0, y: 12 }}
+      animate={{ scale: 1, opacity: 1, y: 0 }}
+      data-card="face"
+      data-rank={card.rank}
+      className={`saloon-card relative shrink-0 overflow-hidden flex flex-col ${corner ? 'justify-start items-start gap-0' : compact ? 'justify-center items-center gap-0' : 'justify-between'} ${highlight ? 'ring-2 ring-[#e9c46a] ring-offset-1 ring-offset-black/40' : ''} ${className}`}
+      style={{ ...st.box, borderRadius: radius, padding: compact ? 2 : size === 'fan' ? 10 : 4 }}
+    >
+      {highlight && <div className="laser-border-wrap" />}
+      <div data-part="rank" className={`card-rank leading-none ${color} ${compact ? '' : 'self-start'} z-10`} style={st.rank}>{card.rank}</div>
+      <div data-part="suit" className={`leading-none ${color} ${compact ? '' : 'self-center'} z-10`} style={st.suit}>{suitSymbols[card.suit]}</div>
+      {!compact && <div className={`card-rank leading-none self-end rotate-180 ${color} z-10`} style={st.rank}>{card.rank}</div>}
+    </motion.div>
+  );
+}
+
+export function Card({ card, hidden = false, className = "", designOverride, highlight = false, size }: CardProps) {
   const storeDesign = useGameStore(state => state.cardBackDesign);
   const design = designOverride || storeDesign || 'classic-red';
+  if (size) {
+    return <SizedCard card={card} hidden={hidden} size={size} className={className} design={design} highlight={highlight} />;
+  }
   const isPocketCard = className.includes('!w-');
   const isCommunityCard = className.includes('community-card');
 

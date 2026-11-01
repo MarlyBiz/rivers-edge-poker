@@ -229,7 +229,7 @@ export function LandingPage({ onStart }: LandingPageProps) {
   };
 
   return (
-    <div className={`h-full w-full flex flex-col items-center justify-center bg-background relative overflow-y-auto custom-scrollbar ${isSmallLandscape ? 'p-0.5' : 'p-2 sm:p-4 md:p-6'}`}>
+    <div className={`h-full w-full flex flex-col items-center justify-center saloon-bg relative overflow-y-auto custom-scrollbar ${isSmallLandscape ? 'p-0.5' : 'p-2 pt-16 sm:p-4 sm:pt-16 md:p-6 md:pt-16'}`}>
       {/* Background decoration */}
       <div className="absolute inset-0 z-0 opacity-10 pointer-events-none">
          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1200px] h-[600px] border-[1px] border-[#d4af37] rounded-full blur-[100px]" />
@@ -661,7 +661,7 @@ export function LandingPage({ onStart }: LandingPageProps) {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-3 items-center gap-4 md:gap-8 max-w-5xl mx-auto pt-4 md:pt-6 pb-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 items-center gap-3 sm:gap-4 md:gap-8 max-w-5xl mx-auto pt-4 md:pt-6 pb-2">
                 <div className="flex justify-center">
                   <label className="flex items-center gap-2 md:gap-3 cursor-pointer group">
                     <div className="relative">

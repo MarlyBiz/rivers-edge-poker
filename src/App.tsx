@@ -7,7 +7,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { LandingPage } from './components/LandingPage';
 import { PokerTable } from './components/PokerTable';
 import { useGameStore } from './store/gameStore';
-import { RotateCw, Maximize, Play, Mic } from 'lucide-react';
+import { Maximize, Play } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { voiceCommandService } from './services/voiceCommandService';
 import { soundService } from './services/soundService';
@@ -143,11 +143,6 @@ export default function App() {
 
     if (success || fsError) {
       document.body.style.overflow = 'hidden';
-      if (screen.orientation && (screen.orientation as any).lock) {
-        try {
-          await (screen.orientation as any).lock('landscape');
-        } catch (e) {}
-      }
       setInteractionNeeded(false);
     } else {
       setFsError("Fullscreen failed. Best experience in Chrome/Brave. Tap again to play anyway.");
@@ -257,39 +252,7 @@ export default function App() {
   return (
     <div className="w-full h-[100dvh] bg-[#0a0a0a] touch-none overflow-hidden relative">
       <AnimatePresence mode="wait">
-        {isMobile && isPortrait ? (
-          <motion.div 
-            key="portrait-gatekeeper"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[20000] bg-[#0a0a0a] flex flex-col items-center justify-center p-8 text-center"
-          >
-            {/* Game Brand / Logo */}
-            <div className="mb-16">
-              <div className="flex flex-col items-center">
-                <span className="text-sm font-black uppercase tracking-[0.4em] text-zinc-500 mb-1">Elite Stakes</span>
-                <h1 className="text-6xl font-black tracking-tighter uppercase gold-glow leading-none bg-gradient-to-b from-[#f5e492] via-[#d4af37] to-[#b8860b] bg-clip-text text-transparent">River's Edge</h1>
-                <span className="text-xl font-bold text-[#d4af37] uppercase tracking-[0.3em] mt-1 italic">Poker</span>
-              </div>
-            </div>
-
-            <motion.div
-              animate={{ rotate: 90 }}
-              transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-              className="mb-8"
-            >
-              <RotateCw className="w-12 h-12 text-[#d4af37]" />
-            </motion.div>
-            
-            <div className="space-y-4 max-w-xs mx-auto">
-              <h2 className="text-xl font-black text-white uppercase tracking-tighter">Landscape Mode Required</h2>
-              <p className="text-zinc-500 leading-relaxed text-xs font-bold uppercase tracking-widest px-4">
-                This game is optimized for landscape mode. Please rotate your phone to landscape to begin.
-              </p>
-            </div>
-          </motion.div>
-        ) : isMobile && interactionNeeded ? (
+        {isMobile && interactionNeeded ? (
           <motion.div 
             key="interaction-gatekeeper"
             initial={{ opacity: 0 }}
@@ -311,7 +274,7 @@ export default function App() {
                   <span className="text-[10px] font-black self-end rotate-180 leading-none text-red-900">A</span>
                 </div>
               </div>
-              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 mb-0.5">Elite Stakes</span>
+              <span className="text-[12px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-0.5">Elite Stakes</span>
               <h1 className="text-3xl md:text-5xl font-black tracking-tighter uppercase gold-glow leading-none bg-gradient-to-b from-[#f5e492] via-[#d4af37] to-[#b8860b] bg-clip-text text-transparent">River's Edge</h1>
               <span className="text-sm md:text-base font-bold text-[#d4af37] uppercase tracking-[0.3em] mt-0.5 italic">Poker</span>
             </div>
@@ -327,7 +290,7 @@ export default function App() {
               </div>
               <div className="flex flex-col items-center gap-1">
                 <h2 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tighter">TAP TO PLAY</h2>
-                <p className="text-[#d4af37] text-[10px] md:text-xs font-black uppercase tracking-[0.3em] animate-pulse">Enter Arena Full Screen</p>
+                <p className="text-[#d4af37] text-[12px] md:text-xs font-black uppercase tracking-[0.2em] animate-pulse">Enter the saloon</p>
               </div>
             </motion.button>
             
@@ -335,18 +298,17 @@ export default function App() {
               <motion.p 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mt-6 text-red-500 text-[10px] font-bold uppercase tracking-widest bg-red-500/10 border border-red-500/20 px-6 py-2 rounded-full"
+                className="mt-6 text-red-500 text-[12px] font-bold uppercase tracking-widest bg-red-500/10 border border-red-500/20 px-6 py-2 rounded-full"
               >
                 {fsError}
               </motion.p>
             )}
 
-            <div className="absolute bottom-6 flex flex-col items-center gap-2">
-              <div className="flex items-center gap-2 text-zinc-600">
-                 <Maximize className="w-3 h-3" />
-                 <span className="text-[8px] font-black uppercase tracking-[0.2em]">Fullscreen Experience Optimized</span>
+            <div className="mt-8 flex flex-col items-center gap-1 pointer-events-none">
+              <div className="flex items-center gap-2 text-zinc-500">
+                 <Maximize className="w-3.5 h-3.5" />
+                 <span className="text-[12px] font-bold uppercase tracking-[0.12em]">Plays in portrait or landscape</span>
               </div>
-              <p className="text-zinc-700 text-[7px] font-bold uppercase tracking-[0.4em]">Works best on Brave & Chrome</p>
             </div>
           </motion.div>
         ) : (
@@ -374,7 +336,7 @@ export default function App() {
         )}
       </AnimatePresence>
       {/* Install + Share: on the start screens only, never over a hand in play */}
-      {(phase === 'setup' || (isMobile && (isPortrait || interactionNeeded))) && <AppActions />}
+      {(phase === 'setup' || (isMobile && interactionNeeded)) && <AppActions />}
     </div>
   );
 }

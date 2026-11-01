@@ -8,9 +8,29 @@ interface ChipStackProps {
   showValue?: boolean;
   variant?: 'player' | 'pot';
   orientation?: 'horizontal' | 'vertical';
+  /** 'md' = original 56px chips; 'sm' = 24px clay chips for the phone table. */
+  size?: 'sm' | 'md';
 }
 
-export function ChipStack({ amount, className = "", showValue = true, variant = 'player', orientation = 'vertical' }: ChipStackProps) {
+/** Clay chip face: solid centre with white rim stripes. */
+export function clayChipBackground(color: string) {
+  return `radial-gradient(circle, ${color} 0 54%, rgba(0,0,0,0.25) 55% 58%, transparent 59%), repeating-conic-gradient(from 8deg, #f4ecd8 0 14deg, ${color} 14deg 45deg)`;
+}
+
+/** Single small clay chip, used for bet badges. */
+export function ClayChip({ color = '#a8322d', px = 16, className = '' }: { color?: string; px?: number; className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={`inline-block rounded-full shrink-0 border border-black/40 shadow-[0_1px_2px_rgba(0,0,0,0.6)] ${className}`}
+      style={{ width: px, height: px, backgroundImage: clayChipBackground(color) }}
+    />
+  );
+}
+
+export function ChipStack({ amount, className = "", showValue = true, variant = 'player', orientation = 'vertical', size = 'md' }: ChipStackProps) {
+  const sm = size === 'sm';
+  const D = sm ? 24 : 56;
   const chipGroups = useMemo(() => {
     if (amount <= 0) return [];
 
@@ -33,30 +53,30 @@ export function ChipStack({ amount, className = "", showValue = true, variant = 
        else groups.push({ value: 1, color: CHIP_COLORS[1], count: remaining });
     }
 
-    return groups;
-  }, [amount]);
+    return sm ? groups.slice(0, 4) : groups;
+  }, [amount, sm]);
 
   if (amount <= 0) return null;
 
   return (
     <div className={`flex flex-col items-center gap-1 ${className}`}>
-      <div className={`flex flex-wrap justify-center ${orientation === 'horizontal' ? 'gap-x-1.5 gap-y-0' : 'gap-x-5 gap-y-3'} max-w-[320px]`}>
+      <div className={`flex ${sm ? 'flex-nowrap' : 'flex-wrap'} justify-center ${orientation === 'horizontal' ? 'gap-x-1.5 gap-y-0' : 'gap-x-5 gap-y-3'} ${sm ? '' : 'max-w-[320px]'}`}>
         {chipGroups.map((group) => {
-          const displayCount = Math.min(group.count, 5);
+          const displayCount = Math.min(group.count, sm ? 3 : 5);
           const isHorizontal = orientation === 'horizontal';
           return (
             <div 
               key={group.value} 
-              className="relative group/chip h-15 w-14"
-              style={{ width: isHorizontal ? (56 + (displayCount - 1) * 8) : 56 }}
+              className={`relative group/chip ${sm ? '' : 'h-15 w-14'}`}
+              style={sm ? { width: isHorizontal ? (D + (displayCount - 1) * 5) : D, height: D } : { width: isHorizontal ? (56 + (displayCount - 1) * 8) : 56 }}
             >
               <AnimatePresence mode="popLayout">
                 {[...Array(displayCount)].map((_, i) => {
-                  const potOffset = variant === 'pot' ? (i * 3) : (i * 5);
+                  const potOffset = sm ? i * 2 : variant === 'pot' ? (i * 3) : (i * 5);
                   
                   const y = isHorizontal ? 0 : -potOffset;
-                  const x = isHorizontal ? (i * 8) : ((variant === 'pot' ? (Math.random() - 0.5) * 16 : (i * 1)));
-                  const randomRotate = variant === 'pot' ? (Math.random() - 0.5) * 40 : 0;
+                  const x = isHorizontal ? (i * (sm ? 5 : 8)) : ((variant === 'pot' ? (Math.random() - 0.5) * (sm ? 6 : 16) : (i * 1)));
+                  const randomRotate = variant === 'pot' && !sm ? (Math.random() - 0.5) * 40 : 0;
 
                   return (
                     <motion.div
@@ -70,18 +90,23 @@ export function ChipStack({ amount, className = "", showValue = true, variant = 
                         rotate: randomRotate
                       }}
                       exit={{ scale: 0.8, opacity: 0, y: 10 }}
-                      className="absolute w-14 h-14 rounded-full border-2 border-black/35 flex items-center justify-center shadow-[0_4px_8px_rgba(0,0,0,0.5)] hover:scale-110 transition-transform duration-200"
-                      style={{ 
+                      className={`absolute ${sm ? '' : 'w-14 h-14'} rounded-full border-2 border-black/35 flex items-center justify-center shadow-[0_4px_8px_rgba(0,0,0,0.5)] hover:scale-110 transition-transform duration-200`}
+                      style={sm ? {
+                        width: D, height: D,
+                        backgroundImage: clayChipBackground(group.color),
+                        zIndex: i,
+                        borderWidth: 1,
+                      } : { 
                         backgroundColor: group.color,
                         zIndex: i,
                         boxShadow: `inset 0 0 0 6px rgba(255,255,255,0.18), inset 0 0 15px rgba(0,0,0,0.3)`
                       }}
                     >
                       {/* Chip markings */}
-                      <div className="absolute inset-0 rounded-full border-[5px] border-dashed border-black/15 opacity-50" />
+                      {!sm && <div className="absolute inset-0 rounded-full border-[5px] border-dashed border-black/15 opacity-50" />}
                       
                       {/* Only show value on the top chip of each stack */}
-                      {i === displayCount - 1 && (
+                      {i === displayCount - 1 && !sm && (
                         <span 
                           className={`text-[12.5px] font-black pointer-events-none select-none tracking-tighter drop-shadow-[0_1px_1px_rgba(0,0,0,0.7)] ${
                             group.value === 1 || group.value === 1000 ? 'text-black/85' : 'text-white/95'
