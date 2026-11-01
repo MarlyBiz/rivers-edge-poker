@@ -5,44 +5,27 @@
  *    Hidden once the game runs as an installed app.
  *  - Share: native share sheet, else copies the link and shows a toast.
  */
-import { useEffect, useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Download, Share2, Share, X, PlusSquare, MoreVertical } from 'lucide-react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
-import { APP_URL, shareApp } from '../lib/share';
+import { shareWithToast } from '../lib/share';
 
-const btn = 'pointer-events-auto flex items-center gap-1.5 h-9 px-3 rounded-full border border-[#d4af37]/40 bg-black/70 backdrop-blur text-[#f5e492] text-[11px] font-black uppercase tracking-[0.12em] shadow-lg active:scale-95 transition-transform cursor-pointer';
+const btn = 'pointer-events-auto flex items-center gap-1.5 h-9 px-3 rounded-full border border-[#d4af37]/40 bg-black/70 backdrop-blur text-[#f5e492] text-[12px] font-black uppercase tracking-[0.12em] shadow-lg active:scale-95 transition-transform cursor-pointer';
 
-export function AppActions() {
+/** Install: native prompt when offered, otherwise step-by-step instructions. Hidden once installed. */
+export function InstallButton({ className = '', testid, children }: { className?: string; testid?: string; children: ReactNode }) {
   const { isInstallable, isInstalled, isIOS, isSafari, isMac, install } = usePWAInstall();
   const [help, setHelp] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
-  useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 2500); return () => clearTimeout(t); }, [toast]);
-
+  if (isInstalled) return null;
   const onInstall = async () => {
     if (isInstallable && await install()) return;
     if (!isInstallable) setHelp(true);
   };
-  const onShare = async () => {
-    const r = await shareApp();
-    if (r === 'copied') setToast('Link copied: poker.marlylabs.app');
-    else if (r === 'failed') setToast(`Copy this link: ${APP_URL}`);
-  };
   const apple = isIOS || isSafari;
-
   return (
     <>
-      <div className="fixed top-3 right-3 z-[30000] flex items-center gap-2 pointer-events-none" style={{ top: 'max(0.75rem, env(safe-area-inset-top))' }} data-testid="app-actions">
-        {!isInstalled && (
-          <button onClick={onInstall} className={btn} aria-label="Install app" title="Install River's Edge Poker">
-            <Download className="w-3.5 h-3.5" /><span>Install</span>
-          </button>
-        )}
-        <button onClick={onShare} className={btn} aria-label="Share app" title="Share this game">
-          <Share2 className="w-3.5 h-3.5" /><span>Share</span>
-        </button>
-      </div>
-
+      <button data-testid={testid} onClick={onInstall} className={className} aria-label="Install app" title="Install River's Edge Poker">{children}</button>
       {help && createPortal(
         <div className="fixed inset-0 z-[30001] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setHelp(false)} role="dialog" aria-label="Install instructions">
           <div className="w-full max-w-sm rounded-2xl border border-[#d4af37]/30 bg-[#111] p-5 text-left text-zinc-200 shadow-2xl" onClick={e => e.stopPropagation()}>
@@ -67,10 +50,21 @@ export function AppActions() {
         </div>,
         document.body
       )}
-      {toast && createPortal(
-        <div role="status" data-testid="share-toast" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[30002] px-4 py-2 rounded-full bg-[#d4af37] text-black text-xs font-black shadow-lg">{toast}</div>,
-        document.body
-      )}
     </>
+  );
+}
+
+/** Share: native share sheet, else copy the link and show a toast. */
+export function ShareButton({ className = '', testid, children }: { className?: string; testid?: string; children: ReactNode }) {
+  return <button data-testid={testid} onClick={() => { shareWithToast(); }} className={className} aria-label="Share the game" title="Share this game">{children}</button>;
+}
+
+/** Floating pair — only on the tap-to-play splash (nothing scrolls under it there). */
+export function AppActions() {
+  return (
+    <div className="fixed top-3 right-3 z-[30000] flex items-center gap-2" style={{ top: 'max(0.75rem, env(safe-area-inset-top))' }} data-testid="app-actions">
+      <InstallButton className={btn}><Download className="w-3.5 h-3.5" /><span>Install</span></InstallButton>
+      <ShareButton className={btn}><Share2 className="w-3.5 h-3.5" /><span>Share</span></ShareButton>
+    </div>
   );
 }

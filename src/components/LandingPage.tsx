@@ -3,8 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card as UICard, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion, AnimatePresence } from "motion/react";
-import { HelpCircle, Play, Moon, Sun, Heart, RotateCcw, Minimize, Maximize } from "lucide-react";
+import { HelpCircle, Play, Moon, Sun, Heart, RotateCcw, Minimize, Maximize, Share2, Download } from "lucide-react";
+import { InstallButton, ShareButton } from "./AppActions";
 import { clayChipBackground } from "./ChipStack";
+import { FeltPreview, feltColor } from "./table/felt";
 import { CardBack } from "./Card";
 import { HowToPlayModal } from "./HowToPlayModal";
 import { BOT_NAMES } from "../lib/gameLogic";
@@ -183,18 +185,18 @@ export function LandingPage({ onStart }: LandingPageProps) {
   });
 
   const tableColors = [
-    { id: 'green', hex: '#0a4225', label: 'Classic Green' },
-    { id: 'red', hex: '#630a0a', label: 'Casino Red' },
-    { id: 'blue', hex: '#0a2342', label: 'Navy Blue' },
-    { id: 'burgundy', hex: '#420a1c', label: 'Burgundy' },
-    { id: 'black', hex: '#111111', label: 'Black' },
-    { id: 'purple', hex: '#280a42', label: 'Purple' },
-    { id: 'forest', hex: '#143306', label: 'Forest' },
-    { id: 'chocolate', hex: '#3d1c02', label: 'Chocolate' },
-    { id: 'charcoal', hex: '#222222', label: 'Charcoal' },
-    { id: 'teal', hex: '#063333', label: 'Teal' },
-    { id: 'olive', hex: '#333306', label: 'Olive' },
-    { id: 'navy', hex: '#000033', label: 'True Navy' },
+    { id: 'green', label: 'Classic Green' },
+    { id: 'red', label: 'Casino Red' },
+    { id: 'blue', label: 'Navy Blue' },
+    { id: 'burgundy', label: 'Burgundy' },
+    { id: 'black', label: 'Black' },
+    { id: 'purple', label: 'Purple' },
+    { id: 'forest', label: 'Forest' },
+    { id: 'chocolate', label: 'Chocolate' },
+    { id: 'charcoal', label: 'Charcoal' },
+    { id: 'teal', label: 'Teal' },
+    { id: 'olive', label: 'Olive' },
+    { id: 'navy', label: 'True Navy' },
   ];
 
   const designs = [
@@ -272,17 +274,17 @@ export function LandingPage({ onStart }: LandingPageProps) {
     { key: 'rabbitHunting', label: 'Rabbit hunt' },
   ];
   const tap = (fn: () => void, sound: 'click' | 'tick' = 'click') => () => { soundService.play(sound); fn(); };
-  const feltHex = (id: string) => (id === 'green' ? '#2f5b3c' : id === 'forest' ? '#294d2c' : tableColors.find(c => c.id === id)?.hex || '#2f5b3c');
 
+  const heroTile = 'min-h-[52px] w-[84px] rounded-xl saloon-btn-ghost text-[12px] font-bold flex flex-col items-center justify-center gap-1 leading-tight active:translate-y-px';
   const hero = (
-    <div data-testid="lp-hero" className={`relative flex flex-col items-center justify-center text-center ${landscape ? 'min-h-full px-4 py-4' : 'pt-16 pb-5 px-4'}`}>
+    <div data-testid="lp-hero" className={`relative flex flex-col items-center justify-center text-center ${landscape ? 'min-h-full px-4 py-4' : 'pt-6 pb-5 px-4'}`}>
       {/* lamp-light glow */}
       <div className="absolute inset-x-0 top-0 h-[70%] pointer-events-none" style={{ background: 'radial-gradient(ellipse 60% 70% at 50% 0%, rgba(255,184,96,0.22), transparent 70%)' }} />
       {/* mini table: walnut rail + felt with the gold aces */}
-      <div className="relative saloon-rail rounded-[50%] p-2.5" style={{ width: landscape ? (vw.h < 450 ? 'min(200px, 70%)' : 'min(300px, 80%)') : 'min(300px, 78vw)', aspectRatio: '2 / 1' }}>
-        <div className="w-full h-full saloon-brass p-[3px] rounded-[50%]">
-          <div className="w-full h-full saloon-felt rounded-[50%] flex items-center justify-center" style={{ backgroundColor: feltHex(settings.tableColor) }}>
-            <div className="flex -space-x-4">
+      <div className="relative" style={{ width: landscape ? (vw.h < 450 ? 'min(200px, 70%)' : 'min(300px, 80%)') : 'min(300px, 78vw)' }}>
+        <FeltPreview color={feltColor(settings.tableColor)}>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="flex -space-x-4" style={{ transform: 'scale(2.1)' }}>
               {[['A', '♠', 'text-black/90', -12], ['A', '♥', 'text-red-900', 10]].map(([r, su, col, rot], i) => (
                 <motion.div key={i} initial={{ y: 12, opacity: 0, rotate: 0 }} animate={{ y: 0, opacity: 1, rotate: rot as number }} transition={{ delay: 0.15 + i * 0.12 }}
                   className="w-14 h-20 bg-gradient-to-br from-[#f5e492] via-[#d4af37] to-[#b8860b] rounded-[6px] border border-white/30 shadow-[0_8px_20px_rgba(0,0,0,0.6)] flex flex-col items-center justify-between p-1.5">
@@ -293,18 +295,24 @@ export function LandingPage({ onStart }: LandingPageProps) {
               ))}
             </div>
           </div>
-        </div>
+        </FeltPreview>
       </div>
       <h1 className={`saloon-title ${landscape && vw.h < 450 ? 'mt-2 text-[34px]' : 'mt-4 text-[40px]'} leading-none font-bold bg-gradient-to-b from-[#f5e492] via-[#d4af37] to-[#9c7424] bg-clip-text text-transparent gold-glow`}>River's Edge</h1>
       <p className="mt-1.5 text-[13px] font-semibold uppercase tracking-[0.28em] text-[#d8c9a8]">Texas Hold'em Saloon</p>
-      <button data-testid="lp-play" onClick={handleStart}
-        className={`relative ${landscape && vw.h < 450 ? 'mt-3' : 'mt-5'} w-full max-w-[320px] min-h-[64px] rounded-2xl text-[20px] font-extrabold uppercase tracking-[0.12em] text-[#1b1208] bg-gradient-to-b from-[#f2d27e] to-[#b8862f] border border-[#7a5a22] shadow-[0_10px_30px_rgba(212,160,60,0.35)] active:translate-y-px flex items-center justify-center gap-3`}>
-        <Play className="w-6 h-6 fill-current" /> Deal me in
-      </button>
+      <div className={`${landscape && vw.h < 450 ? 'mt-3' : 'mt-5'} w-full max-w-[340px] flex gap-2`}>
+        <button data-testid="lp-play" onClick={handleStart}
+          className={`relative flex-1 min-w-0 min-h-[64px] rounded-2xl ${landscape && vw.h < 450 ? 'text-[17px] tracking-[0.05em]' : 'text-[20px] tracking-[0.12em]'} font-extrabold uppercase text-[#1b1208] bg-gradient-to-b from-[#f2d27e] to-[#b8862f] border border-[#7a5a22] shadow-[0_10px_30px_rgba(212,160,60,0.35)] active:translate-y-px flex items-center justify-center gap-2 whitespace-nowrap px-2`}>
+          <Play className="w-6 h-6 fill-current" /> Deal me in
+        </button>
+        <ShareButton testid="lp-share" className="w-[68px] shrink-0 min-h-[64px] rounded-2xl saloon-plate !text-[#f2d27e] text-[12px] font-bold uppercase tracking-wider flex flex-col items-center justify-center gap-1 active:translate-y-px">
+          <Share2 className="w-5 h-5" />Share
+        </ShareButton>
+      </div>
       <p className="mt-2 text-[12px] text-[#c9b48a]">{opponents + 1} players · ${chips.toLocaleString()} buy-in · {DIFF[difficulty].title}</p>
-      <div className="mt-3 flex gap-2">
-        <button data-testid="lp-howto" onClick={tap(() => setShowTutorial(true))} className="min-h-[44px] px-3 rounded-xl saloon-btn-ghost text-[13px] font-bold flex items-center gap-2 whitespace-nowrap"><HelpCircle className="w-4 h-4" />How to play</button>
-        <button data-testid="lp-fullscreen" onClick={toggleFullscreen} className="min-h-[44px] px-3 rounded-xl saloon-btn-ghost text-[13px] font-bold flex items-center gap-2 whitespace-nowrap">{isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}{isFullscreen ? 'Exit full screen' : 'Full screen'}</button>
+      <div className="mt-3 flex gap-2 justify-center">
+        <button data-testid="lp-howto" onClick={tap(() => setShowTutorial(true))} className={heroTile}><HelpCircle className="w-4 h-4" />How to play</button>
+        <button data-testid="lp-fullscreen" onClick={toggleFullscreen} className={heroTile}>{isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}{isFullscreen ? 'Exit full' : 'Full screen'}</button>
+        <InstallButton testid="lp-install" className={heroTile}><Download className="w-4 h-4" />Install</InstallButton>
       </div>
     </div>
   );
@@ -377,14 +385,18 @@ export function LandingPage({ onStart }: LandingPageProps) {
       </Section>
 
       <Section id="felt" title="Table felt" hint={tableColors.find(c => c.id === settings.tableColor)?.label}>
-        <div className="grid grid-cols-6 gap-2">
-          {tableColors.map(color => (
-            <button key={color.id} data-testid={`lp-felt-${color.id}`} title={color.label} aria-label={color.label} aria-pressed={settings.tableColor === color.id}
-              onClick={tap(() => setSettings(prev => ({ ...prev, tableColor: color.id as any })), 'tick')}
-              className={`aspect-[3/2] min-h-[36px] rounded-[50%] saloon-rail p-[3px] transition ${settings.tableColor === color.id ? 'ring-2 ring-[#e9c46a] ring-offset-2 ring-offset-[#24170d]' : 'opacity-75'}`}>
-              <span className="block w-full h-full rounded-[50%] saloon-felt" style={{ backgroundColor: feltHex(color.id) }} />
-            </button>
-          ))}
+        <div className={`grid gap-2.5 ${landscape ? 'grid-cols-4' : 'grid-cols-3'}`}>
+          {tableColors.map(color => {
+            const on = settings.tableColor === color.id;
+            return (
+              <button key={color.id} data-testid={`lp-felt-${color.id}`} title={color.label} aria-label={color.label} aria-pressed={on}
+                onClick={tap(() => setSettings(prev => ({ ...prev, tableColor: color.id as any })), 'tick')}
+                className={`rounded-xl p-1.5 flex flex-col items-center gap-1 transition border ${on ? 'border-[#e9c46a] bg-[#e9c46a]/10 shadow-[0_0_14px_rgba(233,196,106,0.35)]' : 'border-transparent'}`}>
+                <FeltPreview color={feltColor(color.id)} />
+                <span className={`text-[12px] font-semibold leading-tight ${on ? 'text-[#f2d27e]' : 'text-[#d8c9a8]'}`}>{color.label}</span>
+              </button>
+            );
+          })}
         </div>
       </Section>
 
@@ -434,6 +446,14 @@ export function LandingPage({ onStart }: LandingPageProps) {
         </div>
       </Section>
 
+      <Section id="invite" title="Ride with friends" hint="Send them the link">
+        <div className="flex gap-2">
+          <ShareButton testid="lp-share-setup" className="flex-1 min-h-[52px] rounded-xl text-[15px] font-extrabold uppercase tracking-wider text-[#1b1208] bg-gradient-to-b from-[#f2d27e] to-[#b8862f] border border-[#7a5a22] flex items-center justify-center gap-2 active:translate-y-px">
+            <Share2 className="w-5 h-5" />Share the game
+          </ShareButton>
+          <InstallButton testid="lp-install-setup" className="min-h-[52px] px-4 rounded-xl saloon-btn-ghost text-[13px] font-bold flex items-center gap-2"><Download className="w-4 h-4" />Install</InstallButton>
+        </div>
+      </Section>
       <a href="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=Marlonhanson@me.com&currency_code=USD" target="_blank" rel="noreferrer"
         onClick={() => soundService.play('click')}
         className="self-center min-h-[44px] px-5 rounded-xl saloon-btn-ghost text-[13px] font-bold flex items-center gap-2">
@@ -447,7 +467,7 @@ export function LandingPage({ onStart }: LandingPageProps) {
       {landscape ? (
         <div className="h-full w-full flex" style={{ paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
           <div className="w-[42%] max-w-[480px] h-full overflow-y-auto no-scrollbar">{hero}</div>
-          <div className="flex-1 h-full overflow-y-auto custom-scrollbar px-3 pt-16 md:pt-20">
+          <div className="flex-1 h-full overflow-y-auto custom-scrollbar px-3 pt-4 md:pt-6">
             <div className="max-w-[640px] mx-auto">{choices}</div>
           </div>
         </div>

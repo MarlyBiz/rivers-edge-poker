@@ -21,15 +21,18 @@ const landingResults = [];
 const measureLanding = (p) => p.evaluate(() => {
   const vw = innerWidth, vh = innerHeight;
   const R = el => el.getBoundingClientRect();
-  const acts = [...document.querySelectorAll('[data-testid=app-actions] button')].map(R);
-  const targets = [...document.querySelectorAll('[data-testid=lp-hero] h1, [data-testid=lp-play], [data-testid=lp-howto], [data-testid=lp-fullscreen], [data-testid^=lp-] > div > h2, [data-testid=lp-hero] > div.saloon-rail')];
+  const acts = [...document.querySelectorAll('[data-testid=app-actions] button, [data-testid=lp-share], [data-testid=lp-install]')].map(R);
+  const share = document.querySelector('[data-testid=lp-share]'); const sh = share && R(share);
+  const shareVisible = !!sh && sh.top >= 0 && sh.bottom <= vh && sh.left >= 0 && sh.right <= vw && !!document.querySelector('[data-testid=lp-share-setup]');
+  const targets = [...document.querySelectorAll('[data-testid=lp-hero] h1, [data-testid=lp-play], [data-testid^=lp-] > div > h2, [data-testid=lp-hero] .saloon-rail')];
   const overlaps = [];
   for (const a of acts) for (const t of targets) {
     const b = R(t); const ox = Math.min(a.right, b.right) - Math.max(a.left, b.left), oy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
     if (ox > 0 && oy > 0) overlaps.push(`install/share × ${t.dataset.testid || t.tagName} ${Math.round(ox)}x${Math.round(oy)}`);
   }
   const wide = [...document.querySelectorAll('[data-testid=landing] *')].filter(e => { const b = R(e); return b.width && (b.left < -0.5 || b.right > vw + 0.5) && !e.closest('.overflow-x-auto'); }).slice(0, 5).map(e => `${e.tagName}.${(e.className || '').toString().slice(0, 30)} ${Math.round(R(e).left)}..${Math.round(R(e).right)}`);
-  const play = R(document.querySelector('[data-testid=lp-play]'));
+  const playEl = document.querySelector('[data-testid=lp-play]'); const play = R(playEl);
+  { const kids = [...playEl.children, ...[...playEl.childNodes].filter(n => n.nodeType === 3).map(n => { const r = document.createRange(); r.selectNodeContents(n); return r; })]; for (const k of kids) { const kb = k.getBoundingClientRect(); if (kb.width && (kb.left < play.left + 2 || kb.right > play.right - 2)) overlaps.push(`play label overflows button`); } }
   const small = new Set();
   const walker = document.createTreeWalker(document.querySelector('[data-testid=landing]'), NodeFilter.SHOW_TEXT);
   while (walker.nextNode()) { const n = walker.currentNode; if (!n.textContent.trim()) continue; const el = n.parentElement; if (el.closest('[data-card], .w-14.h-20') || el.closest('[aria-hidden]')) continue; if (!R(el).width) continue; const fs = parseFloat(getComputedStyle(el).fontSize); if (fs < 12) small.add(`${n.textContent.trim().slice(0, 18)}=${fs}`); }
@@ -38,7 +41,7 @@ const measureLanding = (p) => p.evaluate(() => {
   for (let i = 0; i < blocks.length; i++) for (let j = i + 1; j < blocks.length; j++) { const a = blocks[i].b, c = blocks[j].b; const ox = Math.min(a.right, c.right) - Math.max(a.left, c.left), oy = Math.min(a.bottom, c.bottom) - Math.max(a.top, c.top); if (ox > 0 && oy > 0) overlaps.push(`${blocks[i].n} × ${blocks[j].n}`); }
   const rail = document.querySelector('[data-testid=lp-hero] .saloon-rail');
   if (rail && R(rail).top < -0.5) overlaps.push(`hero clipped at top ${Math.round(R(rail).top)}px`);
-  return { overlaps, wide, playVisible: play.top >= 0 && play.bottom <= vh && play.left >= 0 && play.right <= vw, playSize: `${Math.round(play.width)}x${Math.round(play.height)}`, small: [...small], actions: acts.length };
+  return { overlaps, wide, playVisible: play.top >= 0 && play.bottom <= vh && play.left >= 0 && play.right <= vw, playSize: `${Math.round(play.width)}x${Math.round(play.height)}`, small: [...small], actions: acts.length, shareVisible };
 });
 
 async function startHand(w, h, mobile, opponents = 5) {
@@ -188,9 +191,9 @@ async function playHand(w, h, tag) {
 }
 
 for (const r of landingResults) {
-  const bad = r.overlaps.length || r.wide.length || !r.playVisible || r.small.length || r.actions !== 2;
+  const bad = r.overlaps.length || r.wide.length || !r.playVisible || r.small.length || r.actions !== 2 || !r.shareVisible;
   if (bad) failures++;
-  console.log(`${bad ? 'FAIL' : 'PASS'} landing ${r.vp} play=${r.playSize} visible=${r.playVisible} install/share=${r.actions}${bad ? ' ' + JSON.stringify({ o: r.overlaps, wide: r.wide, small: r.small }) : ''}`);
+  console.log(`${bad ? 'FAIL' : 'PASS'} landing ${r.vp} play=${r.playSize} visible=${r.playVisible} install/share=${r.actions} share-visible=${r.shareVisible}${bad ? ' ' + JSON.stringify({ o: r.overlaps, wide: r.wide, small: r.small }) : ''}`);
   if (SHOTS) {}
 }
 LANDING_CHECK = false;

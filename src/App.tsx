@@ -338,8 +338,8 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
-      {/* Install + Share: on the start screens only, never over a hand in play */}
-      {(phase === 'setup' || (isMobile && interactionNeeded)) && <AppActions />}
+      {/* Floating Install + Share on the splash only; the setup screen and table menu have their own inline buttons */}
+      {isMobile && interactionNeeded && <AppActions />}
     </div>
   );
 }

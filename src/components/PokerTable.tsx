@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback, type CSSProperties } from "react";
+import { feltColor } from './table/felt';
 import { motion, AnimatePresence } from "motion/react";
 import { GameState, PokerCard as PokerCardType, Player, PlayerAction } from "../types";
 import { Card, CardBack } from "./Card";
@@ -970,7 +971,6 @@ export function PokerTable({ gameState, onAction, onReset, onRestart, onQuit }: 
     // requiring manual resume via the Play button as per requirements.
   };
 
-  const SALOON_FELT: Record<string, string> = { ...TABLE_COLORS, green: '#2f5b3c', forest: '#294d2c' };
   const saloonCtx: SaloonCtx = {
     players: gameState.players,
     communityCards: gameState.communityCards,
@@ -1006,7 +1006,7 @@ export function PokerTable({ gameState, onAction, onReset, onRestart, onQuit }: 
     winProbability: gameState.enableInsights && winProbability !== null ? winProbability : null,
     potOdds: settings.showPotOdds && potOdds !== null ? potOdds : null,
     handLabel: user && user.cards.length > 0 ? evaluateHand(user.cards, gameState.communityCards).label : '',
-    feltColor: SALOON_FELT[settings.tableColor || 'green'] || SALOON_FELT.green,
+    feltColor: feltColor(settings.tableColor),
     voiceStatus,
     voiceSupported: voiceCommandService.isSupported(),
     showHandHelper,

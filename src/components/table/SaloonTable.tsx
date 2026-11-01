@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type 
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Mic, MicOff, Pause, Play, Menu, X, Volume2, VolumeX, Monitor, HelpCircle, Settings,
-  Maximize, Minimize, LogOut, ScrollText, FastForward, Zap, ChevronUp,
+  Maximize, Minimize, LogOut, ScrollText, FastForward, Zap, ChevronUp, Share2,
 } from 'lucide-react';
 import { Card } from '../Card';
 import { ChipStack, ClayChip } from '../ChipStack';
@@ -10,6 +10,8 @@ import { Slider } from '../ui/slider';
 import type { Player } from '../../types';
 import { getTokens, tokenStyle, seatSlots, boardCenterY, type Tokens, type Pt } from './layout';
 import type { SaloonCtx } from './types';
+import { FeltSurface } from './felt';
+import { shareWithToast } from '../../lib/share';
 import { useSeatCaptions, CAPTION_COLOR, type Caption } from './captions';
 
 function useSize(ref: RefObject<HTMLElement | null>) {
@@ -94,6 +96,7 @@ function MenuSheet({ ctx, t, onClose, onLog }: { ctx: SaloonCtx; t: Tokens; onCl
         style={{ top: `calc(${t.topBarH}px + env(safe-area-inset-top))`, right: 'max(8px, env(safe-area-inset-right))' }}
       >
         {item('sound', ctx.settings.soundEffects ? <Volume2 /> : <VolumeX />, ctx.settings.soundEffects ? 'Mute sound' : 'Unmute sound', ctx.toggleSound)}
+        {item('share', <Share2 />, 'Share the game', () => { shareWithToast(); })}
         {ctx.settings.showHandRankingsHelper && item('guide', <Monitor />, 'Hand rankings', ctx.toggleGuide)}
         {item('tips', <HelpCircle />, ctx.settings.showTips ? 'Tips: on' : 'Tips: off', ctx.toggleTips)}
         {item('log', <ScrollText />, 'Hand log', onLog)}
@@ -222,11 +225,7 @@ function TableArea({ ctx, t, areaRef, onLog, captions }: { ctx: SaloonCtx; t: To
       {w > 0 && (
         <>
           {/* Walnut rail → brass inlay → felt */}
-          <div className="absolute saloon-rail" style={{ inset: portrait ? '2px 4px' : '4px 6px', borderRadius: railR, padding: pad }}>
-            <div className="w-full h-full saloon-brass p-[3px]" style={{ borderRadius: railR }}>
-              <div className="w-full h-full saloon-felt" style={{ borderRadius: railR, backgroundColor: ctx.feltColor }} />
-            </div>
-          </div>
+          <FeltSurface className="absolute" color={ctx.feltColor} portrait={portrait} pad={pad} style={{ inset: portrait ? '2px 4px' : '4px 6px' }} />
 
           {/* Pot */}
           <div
