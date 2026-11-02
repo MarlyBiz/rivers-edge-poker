@@ -5,13 +5,14 @@ import {
   Maximize, Minimize, LogOut, ScrollText, FastForward, Zap, ChevronUp, Share2, RotateCcw,
 } from 'lucide-react';
 import { Card } from '../Card';
-import { ChipStack, ClayChip } from '../ChipStack';
+import { ChipStack, ClayChip, clayChipBackground } from '../ChipStack';
 import { Slider } from '../ui/slider';
 import type { Player } from '../../types';
 import { getTokens, tokenStyle, seatSlots, boardCenterY, type Tokens, type Pt } from './layout';
 import type { SaloonCtx } from './types';
 import { FeltSurface, roomLight } from './felt';
 import { shareWithToast } from '../../lib/share';
+import { blindSeats } from '../../store/gameStore';
 import { useSeatCaptions, CAPTION_COLOR, type Caption } from './captions';
 
 function useSize(ref: RefObject<HTMLElement | null>) {
@@ -162,9 +163,34 @@ function LogSheet({ ctx, onClose }: { ctx: SaloonCtx; onClose: () => void }) {
 
 /* ───────────────────────── Table: felt, seats, pot, board ───────────────────────── */
 
-/** Dealer button: sits inline in the plate (beside the chip count), never on top of cards or names. */
+/** Dealer button: classic white puck with a bold black D, inline in the plate (never on cards or names). */
 function DealerChip() {
-  return <span data-testid="dealer-chip" className="w-5 h-5 shrink-0 rounded-full bg-[#f4ecd8] border-2 border-[#c9a45c] text-[12px] leading-none font-black text-[#1b1208] flex items-center justify-center" aria-label="Dealer">D</span>;
+  return (
+    <span data-testid="dealer-chip" aria-label="Dealer" title="Dealer"
+      className="w-5 h-5 shrink-0 rounded-full flex items-center justify-center text-[12px] leading-none font-black text-black"
+      style={{ background: 'radial-gradient(circle at 35% 30%, #ffffff 0%, #f1f1f1 55%, #d4d4d4 100%)', border: '1px solid #8a8a8a', boxShadow: 'inset 0 0 0 2px rgba(255,255,255,0.9), inset 0 0 0 3px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.7)' }}>D</span>
+  );
+}
+
+/** Blind marker: SB = one small chip, BB = a stack of two chips; label beside it. */
+function BlindMarker({ kind }: { kind: 'sb' | 'bb' }) {
+  const chip = (c: string, extra: CSSProperties = {}) => <span className="block w-[13px] h-[13px] rounded-full border border-black/50" style={{ backgroundImage: clayChipBackground(c), boxShadow: '0 1px 1px rgba(0,0,0,0.6)', ...extra }} />;
+  return (
+    <span data-testid={`${kind}-marker`} aria-label={kind === 'sb' ? 'Small blind' : 'Big blind'} title={kind === 'sb' ? 'Small blind' : 'Big blind'}
+      className="shrink-0 inline-flex items-center gap-[3px] text-[12px] leading-none font-black text-[#f4ecd8]">
+      {kind === 'sb' ? chip('#2f5f8a') : <span className="relative block w-[13px] h-[16px]">{chip('#a8322d', { position: 'absolute', bottom: 0 })}{chip('#a8322d', { position: 'absolute', bottom: 3 })}</span>}
+      {kind === 'sb' ? 'SB' : 'BB'}
+    </span>
+  );
+}
+
+/** Which blind (if any) this seat posted this hand: same rule as the store (shared helper). */
+function blindOf(ctx: SaloonCtx, idx: number): 'sb' | 'bb' | null {
+  if (ctx.phase === 'setup') return null;
+  const d = ctx.players.findIndex(p => p.isDealer);
+  if (d < 0) return null;
+  const { sb, bb } = blindSeats(ctx.players, d);
+  return idx === sb ? 'sb' : idx === bb ? 'bb' : null;
 }
 
 function Seat({ ctx, p, idx, pt, t, cap, onOpen }: { ctx: SaloonCtx; p: Player; idx: number; pt: Pt; t: Tokens; cap?: Caption; key?: string; onOpen?: (id: string) => void }) {
@@ -203,29 +229,31 @@ function Seat({ ctx, p, idx, pt, t, cap, onOpen }: { ctx: SaloonCtx; p: Player; 
         <span data-testid="seat-name" className={`${lg ? 'text-[15px]' : 'text-[13px]'} font-extrabold uppercase tracking-[0.03em] truncate max-w-full ${isCurrent || isWinner ? 'text-[#e9c46a]' : 'text-[#f4ecd8]'}`}>{p.name}</span>
         <span className={`flex items-center gap-1 max-w-full ${cardsOnRight ? 'flex-row-reverse' : ''}`}>
           <span data-testid="seat-chips" className={`${lg ? 'text-[15px]' : 'text-[13px]'} font-mono font-bold text-[#cfe3c6] tabular-nums truncate`}>{money(p.chips)}</span>
-          {p.isDealer && <DealerChip />}
         </span>
       </div>
      </div>
-     <SeatCaption cap={cap} status={status} isCurrent={isCurrent} bet={p.currentBet} lg={lg} />
+     <SeatCaption cap={cap} status={status} isCurrent={isCurrent} bet={p.currentBet} lg={lg} blind={p.isEliminated ? null : blindOf(ctx, idx)} dealer={!!p.isDealer && !p.isEliminated} />
     </div>
   );
 }
 
-function SeatCaption({ cap, status, isCurrent, bet, lg }: { cap?: Caption; status: string | null; isCurrent: boolean; bet: number; lg: boolean }) {
+function SeatCaption({ cap, status, isCurrent, bet, lg, blind, dealer }: { cap?: Caption; status: string | null; isCurrent: boolean; bet: number; lg: boolean; blind?: 'sb' | 'bb' | null; dealer?: boolean }) {
+  // Dealer puck + blind marker live at the start of the caption row (never on cards, names or chip counts)
+  const mk = dealer || blind ? <>{dealer && <DealerChip />}{blind && <BlindMarker kind={blind} />}</> : null;
   const cls = `${lg ? 'text-[14px]' : 'text-[12px]'} font-bold leading-[16px] h-[16px] mt-0.5 flex items-center justify-center gap-1 whitespace-nowrap overflow-hidden`;
   if (cap && (cap.kind === 'winner' || !status || cap.kind === 'fold')) {
     return (
       <div data-testid="seat-caption" data-kind={cap.kind} className={`${cls} ${CAPTION_COLOR[cap.kind]} ${cap.kind === 'winner' ? 'uppercase tracking-wide' : ''}`}>
-        {(cap.kind === 'call' || cap.kind === 'raise' || cap.kind === 'bet' || cap.kind === 'blind' || cap.kind === 'allin') && <ClayChip px={12} />}
-        <span className="truncate">{cap.text}</span>
+        {mk}
+        {(cap.kind === 'call' || cap.kind === 'raise' || cap.kind === 'bet' || (cap.kind === 'blind' && !mk) || cap.kind === 'allin') && <ClayChip px={12} />}
+        <span className="truncate">{cap.kind === 'blind' && mk ? cap.text.replace(/^Blind\s*/, '') : cap.text}</span>
       </div>
     );
   }
-  if (status) return <div data-testid="seat-caption" data-kind="status" className={`${cls} text-[#c9b48a] uppercase`}>{status}</div>;
-  if (bet > 0) return <div className={`${cls} text-[#e9c46a]`}><ClayChip px={12} />{money(bet)}</div>;
-  if (isCurrent) return <div className={`${cls} text-[#e9c46a]`}>Thinking…</div>;
-  return <div className={cls} />;
+  if (status) return <div data-testid="seat-caption" data-kind="status" className={`${cls} text-[#c9b48a] uppercase`}>{mk}{status}</div>;
+  if (bet > 0) return <div className={`${cls} text-[#e9c46a]`}>{mk || <ClayChip px={12} />}{money(bet)}</div>;
+  if (isCurrent) return <div className={`${cls} text-[#e9c46a]`}>{mk}Thinking…</div>;
+  return <div className={cls}>{mk}</div>;
 }
 
 function TableArea({ ctx, t, areaRef, onLog, captions, onOpenSeat }: { ctx: SaloonCtx; t: Tokens; areaRef: RefObject<HTMLDivElement | null>; onLog: () => void; captions: Record<string, Caption | undefined>; onOpenSeat?: (id: string) => void }) {
@@ -350,6 +378,7 @@ function HeroPlate({ ctx, t, cap }: { ctx: SaloonCtx; t: Tokens; cap?: Caption }
     <div data-testid="hero-plate" className={`min-w-0 flex-1 overflow-hidden flex flex-col leading-tight gap-0.5 rounded-xl px-2.5 py-1.5 saloon-plate ${isCurrent ? 'saloon-plate-active' : ''}`}>
       <div className="flex items-center gap-1.5 min-w-0">
         {u.isDealer && <DealerChip />}
+        {(() => { const k = blindOf(ctx, ctx.players.findIndex(p => p.isUser)); return k ? <BlindMarker kind={k} /> : null; })()}
         <span className={`${lg ? 'text-[15px]' : 'text-[13px]'} font-extrabold uppercase truncate ${isCurrent ? 'text-[#e9c46a]' : 'text-[#f4ecd8]'}`}>{u.name}</span>
         {cap ? <span data-testid="hero-caption" data-kind={cap.kind} className={`ml-auto text-[12px] font-bold whitespace-nowrap truncate ${CAPTION_COLOR[cap.kind]} ${cap.kind === 'winner' ? 'uppercase' : ''}`}>{cap.text}</span>
           : u.currentBet > 0 && <span className="ml-auto flex items-center gap-1 text-[12px] font-bold text-[#e9c46a] whitespace-nowrap"><ClayChip px={13} />{money(u.currentBet)}</span>}

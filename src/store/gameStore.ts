@@ -42,6 +42,19 @@ const DEFAULT_SETTINGS: GameSettings = {
   rabbitHunting: true
 };
 
+/**
+ * Blind seats for a dealer position (skips eliminated players). Heads-up: the dealer posts the
+ * small blind and the other player the big blind (standard rule); otherwise SB/BB follow the button.
+ * Shared by the store and the table markers so they can't disagree.
+ */
+export function blindSeats(players: { isEliminated?: boolean }[], dealerIndex: number): { sb: number; bb: number } {
+  const n = players.length;
+  const next = (start: number) => { let i = ((start % n) + n) % n, c = 0; while (players[i]?.isEliminated && c < n) { i = (i + 1) % n; c++; } return i; };
+  const active = players.filter(p => !p.isEliminated).length;
+  const sb = active === 2 ? next(dealerIndex) : next(dealerIndex + 1);
+  return { sb, bb: next(sb + 1) };
+}
+
 export const useGameStore = create<GameStore>((set, get) => ({
   players: [],
   communityCards: [],
@@ -217,9 +230,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const deck = createDeck();
 
     const dealerIndex = 0;
-    const sbIndex = (dealerIndex + 1) % players.length;
-    const bbIndex = (dealerIndex + 2) % players.length;
-    const utgIndex = (dealerIndex + 3) % players.length;
+    const { sb: sbIndex, bb: bbIndex } = blindSeats(players, dealerIndex);
+    const utgIndex = (bbIndex + 1) % players.length;
 
     const sb = Math.max(1, Math.floor(startingChips * 0.01));
     const bb = Math.max(2, Math.floor(startingChips * 0.02));
@@ -748,8 +760,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return idx;
     };
 
-    const sbIndex = getNextActiveIndex(nextDealerIndex + 1);
-    const bbIndex = getNextActiveIndex(sbIndex + 1);
+    const { sb: sbIndex, bb: bbIndex } = blindSeats(updatedPlayers, nextDealerIndex);
     const utgIndex = getNextActiveIndex(bbIndex + 1);
 
     const sbToPay = Math.min(updatedPlayers[sbIndex].chips, nextSB);

@@ -86,11 +86,11 @@ const measure = (p) => p.evaluate(() => {
     if (ox > 0 && oy > 0) overlaps.push(`${items[i].name} × ${items[j].name} ${ox}x${oy}`);
   }
   // dealer chip: never on any card, name, or another player's plate
-  document.querySelectorAll('[data-testid=dealer-chip]').forEach(dc => {
+  document.querySelectorAll('[data-testid=dealer-chip], [data-testid=sb-marker], [data-testid=bb-marker]').forEach(dc => {
     const d = dc.getBoundingClientRect();
     const hit = (e) => { const b = e.getBoundingClientRect(); return Math.min(d.right, b.right) - Math.max(d.left, b.left) > 0.5 && Math.min(d.bottom, b.bottom) - Math.max(d.top, b.top) > 0.5; };
-    document.querySelectorAll('[data-card], [data-testid=seat-name], [data-testid=seat-chips]').forEach(e => { if (hit(e)) overlaps.push(`dealer-chip × ${e.dataset.testid || 'card'}`); });
-    document.querySelectorAll('[data-testid=seat], [data-testid=hero-plate]').forEach(e => { if (!e.contains(dc) && hit(e)) overlaps.push(`dealer-chip × other plate`); });
+    document.querySelectorAll('[data-card], [data-testid=seat-name], [data-testid=seat-chips]').forEach(e => { if (hit(e)) overlaps.push(`${dc.dataset.testid} × ${e.dataset.testid || 'card'}`); });
+    document.querySelectorAll('[data-testid=seat], [data-testid=hero-plate]').forEach(e => { if (!e.contains(dc) && hit(e)) overlaps.push(`${dc.dataset.testid} × other plate`); });
   });
   // fonts: every visible text node inside the saloon root
   const root = document.querySelector('[data-testid=saloon-root]');
@@ -211,7 +211,7 @@ for (const [w, h] of [[390, 844], [844, 390]]) for (const opp of [1, 2, 3, 4]) {
   const m = await measure(p);
   const bad = m.offscreen.length + m.overlaps.length + errs.length;
   failures += bad ? 1 : 0;
-  console.log(`${bad ? 'FAIL' : 'PASS'} ${opp + 1}p ${w}x${h} dealer=${await p.locator('[data-testid=dealer-chip]').count()}${bad ? ' ' + JSON.stringify({ o: m.overlaps, off: m.offscreen.map(i => i.name), errs }) : ''}`);
+  console.log(`${bad ? 'FAIL' : 'PASS'} ${opp + 1}p ${w}x${h} dealer=${await p.locator('[data-testid=dealer-chip]').count()} sb=${await p.locator('[data-testid=sb-marker]').count()} bb=${await p.locator('[data-testid=bb-marker]').count()}${bad ? ' ' + JSON.stringify({ o: m.overlaps, off: m.offscreen.map(i => i.name), errs }) : ''}`);
   if (SHOTS && opp === 1) await p.screenshot({ path: `${SHOTS}-headsup-${w}x${h}.png` });
   await ctx.close();
 }
