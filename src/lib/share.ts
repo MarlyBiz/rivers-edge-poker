@@ -24,7 +24,7 @@ export function showShareToast(msg: string) {
   el.setAttribute('role', 'status');
   el.dataset.testid = 'share-toast';
   el.textContent = msg;
-  el.style.cssText = 'position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:30002;padding:10px 18px;border-radius:999px;background:linear-gradient(180deg,#f2d27e,#b8862f);border:1px solid #7a5a22;color:#1b1208;font:700 14px/1.2 system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.6);max-width:calc(100vw - 32px);text-align:center';
+  el.style.cssText = 'pointer-events:none;position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:30002;padding:10px 18px;border-radius:999px;background:linear-gradient(180deg,#f2d27e,#b8862f);border:1px solid #7a5a22;color:#1b1208;font:700 14px/1.2 system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.6);max-width:calc(100vw - 32px);text-align:center';
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 2600);
 }

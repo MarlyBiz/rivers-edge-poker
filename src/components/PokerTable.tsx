@@ -353,7 +353,16 @@ export function PokerTable({ gameState, onAction, onReset, onRestart, onQuit }: 
   const isShowdown = gameState.phase === 'showdown';
   const winners = gameState.winners || [];
   const currentPlayer = gameState.players[gameState.currentPlayerIndex];
-  const isUserTurn = currentPlayer?.isUser && !isShowdown;
+  // All-in runout: at most one player can still bet and bets are matched -> no more decisions this hand.
+  const isAllInSituation = useMemo(() => {
+    if (gameState.phase === 'setup' || gameState.phase === 'showdown') return false;
+    const playersInHand = gameState.players.filter(p => !p.isFolded && !p.isEliminated);
+    if (playersInHand.length < 2) return false;
+    const maxRoundBet = Math.max(...playersInHand.map(p => p.currentBet || 0), 0);
+    const bettingSettled = playersInHand.every(p => p.chips === 0 || (p.currentBet || 0) === maxRoundBet);
+    return bettingSettled && playersInHand.filter(p => p.chips > 0).length <= 1;
+  }, [gameState.players, gameState.phase]);
+  const isUserTurn = currentPlayer?.isUser && !isShowdown && !isAllInSituation;
 
   const activePlayers = useMemo(() => gameState.players.filter(p => !p.isFolded), [gameState.players]);
   const maxBetInProgress = useMemo(() => Math.max(...activePlayers.map(p => p.currentBet || 0), 0), [activePlayers]);
@@ -455,27 +464,17 @@ export function PokerTable({ gameState, onAction, onReset, onRestart, onQuit }: 
     }
   }, [isUserTurn]);
 
-  const isAllInSituation = useMemo(() => {
-    if (gameState.phase === 'setup' || gameState.phase === 'showdown') return false;
-    const playersInHand = gameState.players.filter(p => !p.isFolded && !p.isEliminated);
-    if (playersInHand.length < 2) return false;
-
-    const maxRoundBet = Math.max(...playersInHand.map(p => p.currentBet || 0), 0);
-    const bettingSettled = playersInHand.every(p => p.chips === 0 || p.currentBet === maxRoundBet);
-    const playersWithChips = playersInHand.filter(p => p.chips > 0);
-
-    return bettingSettled && playersWithChips.length <= 1;
-  }, [gameState.players, gameState.phase]);
 
   // Auto-advance streets in all-in situations
   useEffect(() => {
+    // Re-arms on every street (phase / board change), so the whole runout deals itself to showdown.
     if (isAllInSituation && !isShowdown && !isPaused) {
       const timer = setTimeout(() => {
         onAction('check', 0);
-      }, 1600);
+      }, 1100);
       return () => clearTimeout(timer);
     }
-  }, [isAllInSituation, isShowdown, onAction, isPaused]);
+  }, [isAllInSituation, isShowdown, onAction, isPaused, gameState.phase, gameState.communityCards.length, gameState.currentPlayerIndex]);
 
   const potOdds = useMemo(() => {
     if (!settings.showPotOdds || callAmount <= 0) return null;
@@ -734,6 +733,8 @@ export function PokerTable({ gameState, onAction, onReset, onRestart, onQuit }: 
       return;
     }
 
+    if (isAllInSituation) return; // runout deals itself; no bot decisions
+
     if (!isUserTurn && currentPlayer) {
       const timer = setTimeout(() => {
         const stateAtTimeout = useGameStore.getState();
@@ -769,7 +770,7 @@ export function PokerTable({ gameState, onAction, onReset, onRestart, onQuit }: 
       }, aiDelay);
       return () => clearTimeout(timer);
     }
-  }, [gameState.currentPlayerIndex, gameState.phase, isShowdown, isUserTurn, currentPlayer?.id, onAction, aiDelay, settings.enableAiChat, isPaused]);
+  }, [gameState.currentPlayerIndex, gameState.phase, isShowdown, isUserTurn, currentPlayer?.id, onAction, aiDelay, settings.enableAiChat, isPaused, isAllInSituation]);
 
   const winnerNames = gameState.players
     .filter(p => winners.includes(p.id))

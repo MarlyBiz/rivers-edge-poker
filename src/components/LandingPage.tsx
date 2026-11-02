@@ -6,7 +6,8 @@ import { motion, AnimatePresence } from "motion/react";
 import { HelpCircle, Play, Moon, Sun, Heart, RotateCcw, Minimize, Maximize, Share2, Download } from "lucide-react";
 import { InstallButton, ShareButton } from "./AppActions";
 import { clayChipBackground } from "./ChipStack";
-import { FeltPreview, feltColor } from "./table/felt";
+import { FeltPreview, feltColor, roomLight } from "./table/felt";
+import { loadSetup, saveSetup } from "../lib/setupPrefs";
 import { CardBack } from "./Card";
 import { HowToPlayModal } from "./HowToPlayModal";
 import { BOT_NAMES } from "../lib/gameLogic";
@@ -41,13 +42,14 @@ function Section({ title, hint, children, id }: { title: string; hint?: string; 
 
 export function LandingPage({ onStart }: LandingPageProps) {
   const [activeTab, setActiveTab] = useState<'main' | 'settings'>('main');
-  const [opponents, setOpponents] = useState(3);
-  const [chips, setChips] = useState(10000);
-  const [difficulty, setDifficulty] = useState<GameDifficulty>('medium');
+  const [saved] = useState(loadSetup);
+  const [opponents, setOpponents] = useState(saved.opponents ?? 3);
+  const [chips, setChips] = useState(saved.chips ?? 10000);
+  const [difficulty, setDifficulty] = useState<GameDifficulty>(saved.difficulty ?? 'medium');
   const [userName, setUserNameRaw] = useState<string>(() => loadNames().user || "Player 1");
   const [botNames, setBotNames] = useState<string[]>([]);
   const setUserName = (v: string) => { setUserNameRaw(v); saveNames({ user: v }); };
-  const [cardDesign, setCardDesign] = useState("classic-red");
+  const [cardDesign, setCardDesign] = useState(saved.cardDesign ?? "classic-red");
   const [showTutorial, setShowTutorial] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isSmallLandscape, setIsSmallLandscape] = useState(false);
@@ -175,7 +177,7 @@ export function LandingPage({ onStart }: LandingPageProps) {
     }
   };
 
-  const [settings, setSettings] = useState<GameSettings>({
+  const [settings, setSettings] = useState<GameSettings>(() => ({
     soundEffects: true,
     showPotOdds: true,
     highlightBestHand: true,
@@ -191,8 +193,11 @@ export function LandingPage({ onStart }: LandingPageProps) {
     showTooltips: false,
     voiceCommands: true,
     rabbitHunting: true,
-    cardBackDesign: 'classic-red'
-  });
+    cardBackDesign: 'classic-red',
+    ...(saved.settings || {}),
+  } as GameSettings));
+  // Remember every setup choice for next time (until changed)
+  useEffect(() => { saveSetup({ opponents, chips, difficulty, cardDesign, settings }); }, [opponents, chips, difficulty, cardDesign, settings]);
 
   const tableColors = [
     { id: 'green', label: 'Classic Green' },
@@ -268,9 +273,9 @@ export function LandingPage({ onStart }: LandingPageProps) {
     return () => window.removeEventListener('resize', on);
   }, []);
   const landscape = vw.w > vw.h;
-  const [customBuyIn, setCustomBuyIn] = useState(false);
   const [showNames, setShowNames] = useState(false);
   const BUY_INS: [number, string, string][] = [[1000, '1K', '#f4ecd8'], [5000, '5K', '#a8322d'], [10000, '10K', '#2f5f8a'], [25000, '25K', '#3f7a4a'], [100000, '100K', '#1c1917']];
+  const [customBuyIn, setCustomBuyIn] = useState(() => !BUY_INS.some(([amt]) => amt === chips));
   const sb = Math.max(1, Math.floor(chips * 0.01));
   const bb = Math.max(2, Math.floor(chips * 0.02));
   const DIFF: Record<GameDifficulty, { title: string; sub: string; icon: string }> = {
@@ -300,7 +305,7 @@ export function LandingPage({ onStart }: LandingPageProps) {
       <div className="absolute inset-x-0 top-0 h-[70%] pointer-events-none" style={{ background: 'radial-gradient(ellipse 60% 70% at 50% 0%, rgba(255,184,96,0.22), transparent 70%)' }} />
       {/* mini table: walnut rail + felt with the gold aces */}
       <div className="relative" style={{ width: landscape ? (vw.h < 450 ? 'min(200px, 70%)' : 'min(300px, 80%)') : 'min(300px, 78vw)' }}>
-        <FeltPreview color={feltColor(settings.tableColor)}>
+        <FeltPreview light={roomLight(settings.theme)} color={feltColor(settings.tableColor)}>
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="flex -space-x-4" style={{ transform: 'scale(2.1)' }}>
               {[['A', '♠', 'text-black/90', -12], ['A', '♥', 'text-red-900', 10]].map(([r, su, col, rot], i) => (
@@ -413,7 +418,7 @@ export function LandingPage({ onStart }: LandingPageProps) {
               <button key={color.id} data-testid={`lp-felt-${color.id}`} title={color.label} aria-label={color.label} aria-pressed={on}
                 onClick={tap(() => setSettings(prev => ({ ...prev, tableColor: color.id as any })), 'tick')}
                 className={`rounded-xl p-1.5 flex flex-col items-center gap-1 transition border ${on ? 'border-[#e9c46a] bg-[#e9c46a]/10 shadow-[0_0_14px_rgba(233,196,106,0.35)]' : 'border-transparent'}`}>
-                <FeltPreview color={feltColor(color.id)} />
+                <FeltPreview light={roomLight(settings.theme)} color={feltColor(color.id)} />
                 <span className={`text-[12px] font-semibold leading-tight ${on ? 'text-[#f2d27e]' : 'text-[#d8c9a8]'}`}>{color.label}</span>
               </button>
             );
@@ -484,7 +489,7 @@ export function LandingPage({ onStart }: LandingPageProps) {
   );
 
   return (
-    <div data-testid="landing" className="saloon-bg h-full w-full relative overflow-hidden text-[#f4ecd8]">
+    <div data-testid="landing" data-room={roomLight(settings.theme)} className={`saloon-bg room-${roomLight(settings.theme)} h-full w-full relative overflow-hidden text-[#f4ecd8]`}>
       {landscape ? (
         <div className="h-full w-full flex" style={{ paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
           <div className="w-[42%] max-w-[480px] h-full overflow-y-auto no-scrollbar">{hero}</div>

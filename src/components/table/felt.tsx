@@ -8,14 +8,18 @@ export const FELT_COLORS: Record<string, string> = {
 export const feltColor = (id?: string) => FELT_COLORS[id || 'green'] || FELT_COLORS.green;
 
 /** Walnut rail → brass inlay → felt. Used by the live table and by every preview, so they can't drift. */
-export function FeltSurface({ color, portrait, pad = 11, style, className = '', children }: {
-  color: string; portrait: boolean; pad?: number; style?: CSSProperties; className?: string; children?: ReactNode;
+export type RoomLight = 'lit' | 'dark';
+/** Settings theme -> room lighting ('light' = lamp-lit room, anything else = dark room with a spotlight). */
+export const roomLight = (theme?: string): RoomLight => (theme === 'light' ? 'lit' : 'dark');
+
+export function FeltSurface({ color, portrait, pad = 11, style, className = '', children, light = 'dark' }: {
+  color: string; portrait: boolean; pad?: number; style?: CSSProperties; className?: string; children?: ReactNode; light?: RoomLight;
 }) {
   const railR = portrait ? '44% / 24%' : '26% / 48%';
   return (
-    <div className={`saloon-rail ${className}`} style={{ borderRadius: railR, padding: pad, ...style }}>
+    <div className={`saloon-rail room-${light} ${className}`} style={{ borderRadius: railR, padding: pad, ...style }}>
       <div className="w-full h-full saloon-brass p-[3px]" style={{ borderRadius: railR }}>
-        <div data-testid="felt" className="w-full h-full saloon-felt relative" style={{ borderRadius: railR, backgroundColor: color }}>{children}</div>
+        <div data-testid="felt" className="w-full h-full saloon-felt relative" style={{ borderRadius: railR, backgroundColor: color }}><div className={`felt-light ${light}`} />{children}</div>
       </div>
     </div>
   );
@@ -25,7 +29,7 @@ export function FeltSurface({ color, portrait, pad = 11, style, className = '', 
 const REF_W = 640, REF_H = 300;
 
 /** The real table surface rendered at table size and scaled down uniformly — an exact miniature. */
-export function FeltPreview({ color, children, className = '' }: { color: string; children?: ReactNode; className?: string }) {
+export function FeltPreview({ color, children, className = '', light = 'dark' }: { color: string; children?: ReactNode; className?: string; light?: RoomLight }) {
   const ref = useRef<HTMLDivElement>(null);
   const [s, setS] = useState(0);
   useLayoutEffect(() => {
@@ -37,7 +41,7 @@ export function FeltPreview({ color, children, className = '' }: { color: string
   return (
     <div ref={ref} className={`relative w-full ${className}`} style={{ aspectRatio: `${REF_W} / ${REF_H}` }}>
       {s > 0 && (
-        <FeltSurface color={color} portrait={false}
+        <FeltSurface color={color} portrait={false} light={light}
           style={{ position: 'absolute', left: 0, top: 0, width: REF_W, height: REF_H, transform: `scale(${s})`, transformOrigin: '0 0' }}>
           {children}
         </FeltSurface>

@@ -6,6 +6,7 @@
  * restored state (no re-deal). Save is cleared at game over or when leaving to setup.
  */
 import { useGameStore } from './gameStore';
+import { saveSetup } from '../lib/setupPrefs';
 
 const KEY = 'rivers-edge-save';
 const SAVE_VERSION = 1;
@@ -47,7 +48,11 @@ export function restoreSave(): boolean {
 
 let timer: ReturnType<typeof setTimeout> | undefined;
 export function startAutoSave() {
-  useGameStore.subscribe(() => { clearTimeout(timer); timer = setTimeout(write, 400); });
+  useGameStore.subscribe((st, prev) => {
+    clearTimeout(timer); timer = setTimeout(write, 400);
+    // Settings changed during a game (e.g. room lighting, rules) also become next game's setup defaults.
+    if (st.settings !== prev.settings && st.phase !== 'setup') saveSetup({ settings: st.settings });
+  });
   const flush = () => { clearTimeout(timer); write(); };
   window.addEventListener('pagehide', flush);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });

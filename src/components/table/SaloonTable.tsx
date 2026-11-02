@@ -10,7 +10,7 @@ import { Slider } from '../ui/slider';
 import type { Player } from '../../types';
 import { getTokens, tokenStyle, seatSlots, boardCenterY, type Tokens, type Pt } from './layout';
 import type { SaloonCtx } from './types';
-import { FeltSurface } from './felt';
+import { FeltSurface, roomLight } from './felt';
 import { shareWithToast } from '../../lib/share';
 import { useSeatCaptions, CAPTION_COLOR, type Caption } from './captions';
 
@@ -162,7 +162,12 @@ function LogSheet({ ctx, onClose }: { ctx: SaloonCtx; onClose: () => void }) {
 
 /* ───────────────────────── Table: felt, seats, pot, board ───────────────────────── */
 
-function Seat({ ctx, p, idx, pt, t, cap }: { ctx: SaloonCtx; p: Player; idx: number; pt: Pt; t: Tokens; cap?: Caption; key?: string }) {
+/** Dealer button: sits inline in the plate (beside the chip count), never on top of cards or names. */
+function DealerChip() {
+  return <span data-testid="dealer-chip" className="w-5 h-5 shrink-0 rounded-full bg-[#f4ecd8] border-2 border-[#c9a45c] text-[12px] leading-none font-black text-[#1b1208] flex items-center justify-center" aria-label="Dealer">D</span>;
+}
+
+function Seat({ ctx, p, idx, pt, t, cap, onOpen }: { ctx: SaloonCtx; p: Player; idx: number; pt: Pt; t: Tokens; cap?: Caption; key?: string; onOpen?: (id: string) => void }) {
   const isCurrent = ctx.currentPlayerIndex === idx && !ctx.isShowdown && !ctx.isPaused;
   const isWinner = ctx.isShowdown && ctx.winners.includes(p.id);
   const faceUp = !p.isFolded && !p.isEliminated && (ctx.isShowdown || ctx.isAllInSituation);
@@ -180,7 +185,9 @@ function Seat({ ctx, p, idx, pt, t, cap }: { ctx: SaloonCtx; p: Player; idx: num
       style={{ left: pt.x - t.seatW / 2, top: pt.y - t.seatH / 2, width: t.seatW, height: t.seatH }}
     >
      <div className={`flex items-center gap-1.5 min-h-0 ${cardsOnRight ? 'flex-row-reverse' : 'flex-row'}`}>
-      <div data-testid="seat-cards" className="relative flex shrink-0 items-center" style={{ height: t.card[size].h }}>
+      <div data-testid="seat-cards" className={`relative flex shrink-0 items-center ${faceUp && ctx.isShowdown && onOpen ? 'cursor-pointer' : ''}`} style={{ height: t.card[size].h }}
+        role={faceUp && ctx.isShowdown && onOpen ? 'button' : undefined} aria-label={faceUp && ctx.isShowdown && onOpen ? `Show ${p.name}'s cards large` : undefined}
+        onClick={faceUp && ctx.isShowdown && onOpen ? () => onOpen(p.id) : undefined}>
         {p.isEliminated ? null : p.cards.map((c, ci) => (
           <div key={ci} style={{ marginLeft: ci > 0 ? -overlap : 0, transform: `rotate(${ci === 0 ? -4 : 4}deg)` }}>
             <Card
@@ -191,13 +198,13 @@ function Seat({ ctx, p, idx, pt, t, cap }: { ctx: SaloonCtx; p: Player; idx: num
             />
           </div>
         ))}
-        {p.isDealer && (
-          <span data-testid="dealer-chip" className="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-[#f4ecd8] border-2 border-[#c9a45c] text-[12px] font-black text-[#1b1208] flex items-center justify-center z-10" aria-label="Dealer">D</span>
-        )}
       </div>
       <div className={`flex flex-col min-w-0 flex-1 leading-tight ${cardsOnRight ? 'items-end text-right' : 'items-start text-left'}`}>
         <span data-testid="seat-name" className={`${lg ? 'text-[15px]' : 'text-[13px]'} font-extrabold uppercase tracking-[0.03em] truncate max-w-full ${isCurrent || isWinner ? 'text-[#e9c46a]' : 'text-[#f4ecd8]'}`}>{p.name}</span>
-        <span data-testid="seat-chips" className={`${lg ? 'text-[15px]' : 'text-[13px]'} font-mono font-bold text-[#cfe3c6] tabular-nums`}>{money(p.chips)}</span>
+        <span className={`flex items-center gap-1 max-w-full ${cardsOnRight ? 'flex-row-reverse' : ''}`}>
+          <span data-testid="seat-chips" className={`${lg ? 'text-[15px]' : 'text-[13px]'} font-mono font-bold text-[#cfe3c6] tabular-nums truncate`}>{money(p.chips)}</span>
+          {p.isDealer && <DealerChip />}
+        </span>
       </div>
      </div>
      <SeatCaption cap={cap} status={status} isCurrent={isCurrent} bet={p.currentBet} lg={lg} />
@@ -221,7 +228,7 @@ function SeatCaption({ cap, status, isCurrent, bet, lg }: { cap?: Caption; statu
   return <div className={cls} />;
 }
 
-function TableArea({ ctx, t, areaRef, onLog, captions }: { ctx: SaloonCtx; t: Tokens; areaRef: RefObject<HTMLDivElement | null>; onLog: () => void; captions: Record<string, Caption | undefined> }) {
+function TableArea({ ctx, t, areaRef, onLog, captions, onOpenSeat }: { ctx: SaloonCtx; t: Tokens; areaRef: RefObject<HTMLDivElement | null>; onLog: () => void; captions: Record<string, Caption | undefined>; onOpenSeat?: (id: string) => void }) {
   const { w, h } = useSize(areaRef);
   const userIndex = Math.max(0, ctx.players.findIndex(p => p.isUser));
   const n = ctx.players.length;
@@ -247,7 +254,7 @@ function TableArea({ ctx, t, areaRef, onLog, captions }: { ctx: SaloonCtx; t: To
       {w > 0 && (
         <>
           {/* Walnut rail → brass inlay → felt */}
-          <FeltSurface className="absolute" color={ctx.feltColor} portrait={portrait} pad={pad} style={{ inset: portrait ? '2px 4px' : '4px 6px' }} />
+          <FeltSurface className="absolute" light={roomLight(ctx.settings.theme)} color={ctx.feltColor} portrait={portrait} pad={pad} style={{ inset: portrait ? '2px 4px' : '4px 6px' }} />
 
           {/* Pot */}
           <div
@@ -299,7 +306,7 @@ function TableArea({ ctx, t, areaRef, onLog, captions }: { ctx: SaloonCtx; t: To
             </button>
           )}
 
-          {opponents.map((o, i) => slots[i] && <Seat key={o.p.id} ctx={ctx} p={o.p} idx={o.idx} pt={slots[i]} t={t} cap={captions[o.p.id]} />)}
+          {opponents.map((o, i) => slots[i] && <Seat key={o.p.id} ctx={ctx} p={o.p} idx={o.idx} pt={slots[i]} t={t} cap={captions[o.p.id]} onOpen={onOpenSeat} />)}
         </>
       )}
     </div>
@@ -342,7 +349,7 @@ function HeroPlate({ ctx, t, cap }: { ctx: SaloonCtx; t: Tokens; cap?: Caption }
   return (
     <div data-testid="hero-plate" className={`min-w-0 flex-1 overflow-hidden flex flex-col leading-tight gap-0.5 rounded-xl px-2.5 py-1.5 saloon-plate ${isCurrent ? 'saloon-plate-active' : ''}`}>
       <div className="flex items-center gap-1.5 min-w-0">
-        {u.isDealer && <span className="w-5 h-5 shrink-0 rounded-full bg-[#f4ecd8] border-2 border-[#c9a45c] text-[12px] font-black text-[#1b1208] flex items-center justify-center" aria-label="Dealer">D</span>}
+        {u.isDealer && <DealerChip />}
         <span className={`${lg ? 'text-[15px]' : 'text-[13px]'} font-extrabold uppercase truncate ${isCurrent ? 'text-[#e9c46a]' : 'text-[#f4ecd8]'}`}>{u.name}</span>
         {cap ? <span data-testid="hero-caption" data-kind={cap.kind} className={`ml-auto text-[12px] font-bold whitespace-nowrap truncate ${CAPTION_COLOR[cap.kind]} ${cap.kind === 'winner' ? 'uppercase' : ''}`}>{cap.text}</span>
           : u.currentBet > 0 && <span className="ml-auto flex items-center gap-1 text-[12px] font-bold text-[#e9c46a] whitespace-nowrap"><ClayChip px={13} />{money(u.currentBet)}</span>}
@@ -359,8 +366,10 @@ function HeroPlate({ ctx, t, cap }: { ctx: SaloonCtx; t: Tokens; cap?: Caption }
   );
 }
 
-function FanOverlay({ ctx, t, onClose }: { ctx: SaloonCtx; t: Tokens; onClose: () => void }) {
-  const u = ctx.user;
+function FanOverlay({ ctx, t, onClose, player }: { ctx: SaloonCtx; t: Tokens; onClose: () => void; player?: Player }) {
+  const u = player || ctx.user;
+  const other = !!player && !player.isUser;
+  const otherLabel = other ? ctx.winnersInfo.find(w => w.id === player!.id)?.handLabel : undefined;
   const c = t.card.fan;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -372,8 +381,8 @@ function FanOverlay({ ctx, t, onClose }: { ctx: SaloonCtx; t: Tokens; onClose: (
   return (
     <motion.div
       role="dialog"
-      aria-label="Your cards"
-      data-testid="hero-fan"
+      aria-label={other ? `${u?.name}'s cards` : 'Your cards'}
+      data-testid={other ? 'opp-fan' : 'hero-fan'}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       transition={{ duration: 0.15 }}
       onClick={onClose}
@@ -394,8 +403,9 @@ function FanOverlay({ ctx, t, onClose }: { ctx: SaloonCtx; t: Tokens; onClose: (
             </motion.div>
           ))}
         </div>
-        {ctx.handLabel && <span className="text-[16px] font-extrabold uppercase tracking-wide text-[#e9c46a]">{ctx.handLabel}</span>}
-        {(ctx.winProbability !== null || ctx.potOdds !== null) && (
+        {other && <span className="text-[16px] font-extrabold uppercase tracking-wide text-[#f4ecd8]">{u.name}{otherLabel ? ` · ${otherLabel}` : ''}</span>}
+        {!other && ctx.handLabel && <span className="text-[16px] font-extrabold uppercase tracking-wide text-[#e9c46a]">{ctx.handLabel}</span>}
+        {!other && (ctx.winProbability !== null || ctx.potOdds !== null) && (
           <span className="text-[14px] font-semibold text-[#e8dcc0] flex gap-3">
             {ctx.winProbability !== null && <span>Win <b className="text-[#9fd49a]">{ctx.winProbability}%</b></span>}
             {ctx.potOdds !== null && <span>Pot odds <b className="text-[#a9c7e8]">{ctx.potOdds}%</b></span>}
@@ -549,13 +559,14 @@ export function SaloonTable({ ctx, containerRef }: { ctx: SaloonCtx; containerRe
   const { w, h } = useSize(rootRef);
   const t = getTokens(w || 390, h || 844);
   const [fanOpen, setFanOpen] = useState(false);
+  const [fanPlayerId, setFanPlayerId] = useState<string | null>(null);
   const [raiseOpen, setRaiseOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
   const captions = useSeatCaptions(ctx.players, ctx.logs, ctx.phase, ctx.winners);
 
   // Fan: collapse on a new hand, and when the turn clock is about to run out.
-  useEffect(() => { setFanOpen(false); setRaiseOpen(false); }, [ctx.handCount]);
+  useEffect(() => { setFanOpen(false); setRaiseOpen(false); setFanPlayerId(null); }, [ctx.handCount]);
   useEffect(() => {
     if (fanOpen && ctx.isUserTurn && ctx.settings.enableTimer && ctx.turnTimeLeft < 5) setFanOpen(false);
   }, [fanOpen, ctx.isUserTurn, ctx.turnTimeLeft, ctx.settings.enableTimer]);
@@ -580,7 +591,7 @@ export function SaloonTable({ ctx, containerRef }: { ctx: SaloonCtx; containerRe
       ref={rootRef}
       data-testid="saloon-root"
       data-orient={t.orient}
-      className="saloon-bg absolute inset-0 z-[20] flex flex-col text-[#f4ecd8] select-none"
+      className={`saloon-bg room-${roomLight(ctx.settings.theme)} absolute inset-0 z-[20] flex flex-col text-[#f4ecd8] select-none`}
       style={{ ...tokenStyle(t), paddingTop: 'env(safe-area-inset-top)' }}
     >
       <TopBar ctx={ctx} t={t} onMenu={() => { ctx.click(); setMenuOpen(true); }} />
@@ -588,7 +599,7 @@ export function SaloonTable({ ctx, containerRef }: { ctx: SaloonCtx; containerRe
       {portrait ? (
         <>
           <div className="flex-1 min-h-0 flex px-1" style={{ pointerEvents: ctx.isPaused ? 'none' : 'auto' }}>
-            <TableArea ctx={ctx} t={t} areaRef={containerRef} onLog={() => setLogOpen(true)} captions={captions} />
+            <TableArea ctx={ctx} t={t} areaRef={containerRef} onLog={() => setLogOpen(true)} captions={captions} onOpenSeat={id => { ctx.click(); setFanPlayerId(id); }} />
           </div>
           <div data-testid="hero-row" className="shrink-0 flex items-center gap-2 px-2 pt-2" style={{ paddingLeft: 'max(8px, env(safe-area-inset-left))', paddingRight: 'max(8px, env(safe-area-inset-right))' }}>
             <HeroPlate ctx={ctx} t={t} cap={captions[ctx.user?.id || '']} />
@@ -601,7 +612,7 @@ export function SaloonTable({ ctx, containerRef }: { ctx: SaloonCtx; containerRe
       ) : (
         <div className="flex-1 min-h-0 flex">
           <div className="flex-1 min-w-0 flex" style={{ paddingLeft: 'env(safe-area-inset-left)', pointerEvents: ctx.isPaused ? 'none' : 'auto' }}>
-            <TableArea ctx={ctx} t={t} areaRef={containerRef} onLog={() => setLogOpen(true)} captions={captions} />
+            <TableArea ctx={ctx} t={t} areaRef={containerRef} onLog={() => setLogOpen(true)} captions={captions} onOpenSeat={id => { ctx.click(); setFanPlayerId(id); }} />
           </div>
           <div data-testid="side-column" className="shrink-0 flex flex-col justify-between gap-2 py-1.5 pl-1"
             style={{ width: t.sideW, paddingRight: 'max(8px, env(safe-area-inset-right))', paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}>
@@ -615,6 +626,7 @@ export function SaloonTable({ ctx, containerRef }: { ctx: SaloonCtx; containerRe
       )}
 
       <AnimatePresence>{fanOpen && <FanOverlay ctx={ctx} t={t} onClose={() => setFanOpen(false)} />}</AnimatePresence>
+      <AnimatePresence>{fanPlayerId && ctx.players.find(p => p.id === fanPlayerId) && <FanOverlay ctx={ctx} t={t} player={ctx.players.find(p => p.id === fanPlayerId)} onClose={() => setFanPlayerId(null)} />}</AnimatePresence>
       <AnimatePresence>{raiseOpen && <RaiseSheet ctx={ctx} t={t} onClose={() => setRaiseOpen(false)} />}</AnimatePresence>
       <AnimatePresence>{menuOpen && <MenuSheet ctx={ctx} t={t} onClose={() => setMenuOpen(false)} onLog={() => setLogOpen(true)} />}</AnimatePresence>
       <AnimatePresence>{logOpen && <LogSheet ctx={ctx} onClose={() => setLogOpen(false)} />}</AnimatePresence>

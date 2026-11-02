@@ -327,3 +327,28 @@
 @media (prefers-reduced-motion: reduce) {
   .saloon-btn, .saloon-card { transition: none !important; }
 }
+
+/* ── Room lighting (Settings › Dark room / Lit room). Shared by the table and every felt preview. ── */
+.saloon-bg.room-lit {
+  background:
+    radial-gradient(ellipse 80% 55% at 50% 0%, rgba(255, 196, 110, 0.38), transparent 72%),
+    radial-gradient(ellipse 60% 40% at 12% 8%, rgba(255, 186, 100, 0.18), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 88% 8%, rgba(255, 186, 100, 0.18), transparent 70%),
+    radial-gradient(ellipse at 50% 60%, #6a4528 0%, #4a2f1b 55%, #301d10 100%);
+}
+.saloon-bg.room-dark {
+  background:
+    radial-gradient(ellipse 46% 52% at 50% 48%, rgba(255, 226, 170, 0.13), transparent 70%),
+    radial-gradient(ellipse at 50% 55%, #120b07 0%, #070504 55%, #020101 100%);
+}
+.room-lit .saloon-rail, .saloon-rail.room-lit { filter: brightness(1.18) saturate(1.05); }
+.room-dark .saloon-rail, .saloon-rail.room-dark { filter: brightness(0.82); }
+.felt-light { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; }
+.felt-light.lit {
+  background:
+    radial-gradient(ellipse at 50% 38%, rgba(255, 226, 170, 0.24) 0%, rgba(255, 210, 150, 0.10) 45%, transparent 80%),
+    linear-gradient(rgba(255, 200, 140, 0.08), rgba(255, 200, 140, 0.08));
+}
+.felt-light.dark {
+  background: radial-gradient(ellipse 58% 62% at 50% 48%, rgba(255, 238, 200, 0.14) 0%, rgba(255, 230, 180, 0.05) 40%, rgba(0, 0, 0, 0.42) 82%, rgba(0, 0, 0, 0.6) 100%);
+}

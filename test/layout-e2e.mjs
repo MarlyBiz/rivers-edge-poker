@@ -85,6 +85,13 @@ const measure = (p) => p.evaluate(() => {
     const ox = Math.min(a.x + a.w, c.x + c.w) - Math.max(a.x, c.x), oy = Math.min(a.y + a.h, c.y + c.h) - Math.max(a.y, c.y);
     if (ox > 0 && oy > 0) overlaps.push(`${items[i].name} × ${items[j].name} ${ox}x${oy}`);
   }
+  // dealer chip: never on any card, name, or another player's plate
+  document.querySelectorAll('[data-testid=dealer-chip]').forEach(dc => {
+    const d = dc.getBoundingClientRect();
+    const hit = (e) => { const b = e.getBoundingClientRect(); return Math.min(d.right, b.right) - Math.max(d.left, b.left) > 0.5 && Math.min(d.bottom, b.bottom) - Math.max(d.top, b.top) > 0.5; };
+    document.querySelectorAll('[data-card], [data-testid=seat-name], [data-testid=seat-chips]').forEach(e => { if (hit(e)) overlaps.push(`dealer-chip × ${e.dataset.testid || 'card'}`); });
+    document.querySelectorAll('[data-testid=seat], [data-testid=hero-plate]').forEach(e => { if (!e.contains(dc) && hit(e)) overlaps.push(`dealer-chip × other plate`); });
+  });
   // fonts: every visible text node inside the saloon root
   const root = document.querySelector('[data-testid=saloon-root]');
   const small = new Set();
@@ -197,6 +204,17 @@ for (const r of landingResults) {
   if (SHOTS) {}
 }
 LANDING_CHECK = false;
+// 2–5 player tables (6 is covered above): overlaps incl. dealer chip vs cards/plates
+for (const [w, h] of [[390, 844], [844, 390]]) for (const opp of [1, 2, 3, 4]) {
+  const { p, ctx, errs } = await startHand(w, h, true, opp);
+  await waitTurn(p);
+  const m = await measure(p);
+  const bad = m.offscreen.length + m.overlaps.length + errs.length;
+  failures += bad ? 1 : 0;
+  console.log(`${bad ? 'FAIL' : 'PASS'} ${opp + 1}p ${w}x${h} dealer=${await p.locator('[data-testid=dealer-chip]').count()}${bad ? ' ' + JSON.stringify({ o: m.overlaps, off: m.offscreen.map(i => i.name), errs }) : ''}`);
+  if (SHOTS && opp === 1) await p.screenshot({ path: `${SHOTS}-headsup-${w}x${h}.png` });
+  await ctx.close();
+}
 if (PLAY) {
   await playHand(390, 844, 'portrait');
   await playHand(844, 390, 'landscape');
