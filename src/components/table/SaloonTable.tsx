@@ -373,19 +373,37 @@ function HeroPlate({ ctx, t, cap }: { ctx: SaloonCtx; t: Tokens; cap?: Caption }
   const u = ctx.user;
   if (!u) return null;
   const lg = t.tier === 'lg';
+  const landscape = t.orient === 'landscape';
   const isCurrent = ctx.isUserTurn && !ctx.isPaused;
+  const nameCls = `${lg ? 'text-[15px]' : 'text-[13px]'} font-extrabold uppercase truncate min-w-0 ${isCurrent ? 'text-[#e9c46a]' : 'text-[#f4ecd8]'}`;
+  const capCls = `text-[12px] font-bold ${CAPTION_COLOR[cap?.kind || 'check']} ${cap?.kind === 'winner' ? 'uppercase' : ''}`;
+  const status = cap
+    ? <span data-testid="hero-caption" data-kind={cap.kind} className={`${capCls} ${landscape ? 'leading-tight' : 'ml-auto whitespace-nowrap truncate'}`}>{cap.text}</span>
+    : u.currentBet > 0
+      ? <span className={`${landscape ? '' : 'ml-auto'} flex items-center gap-1 text-[12px] font-bold text-[#e9c46a] whitespace-nowrap`}><ClayChip px={13} />{money(u.currentBet)}</span>
+      : null;
   return (
-    <div data-testid="hero-plate" className={`min-w-0 flex-1 overflow-hidden flex flex-col leading-tight gap-0.5 rounded-xl px-2.5 py-1.5 saloon-plate ${isCurrent ? 'saloon-plate-active' : ''}`}>
-      <div className="flex items-center gap-1.5 min-w-0">
-        {u.isDealer && <DealerChip />}
-        {(() => { const k = blindOf(ctx, ctx.players.findIndex(p => p.isUser)); return k ? <BlindMarker kind={k} /> : null; })()}
-        <span className={`${lg ? 'text-[15px]' : 'text-[13px]'} font-extrabold uppercase truncate ${isCurrent ? 'text-[#e9c46a]' : 'text-[#f4ecd8]'}`}>{u.name}</span>
-        {cap ? <span data-testid="hero-caption" data-kind={cap.kind} className={`ml-auto text-[12px] font-bold whitespace-nowrap truncate ${CAPTION_COLOR[cap.kind]} ${cap.kind === 'winner' ? 'uppercase' : ''}`}>{cap.text}</span>
-          : u.currentBet > 0 && <span className="ml-auto flex items-center gap-1 text-[12px] font-bold text-[#e9c46a] whitespace-nowrap"><ClayChip px={13} />{money(u.currentBet)}</span>}
-      </div>
+    <div data-testid="hero-plate" data-layout={landscape ? 'stacked' : 'inline'} className={`min-w-0 flex-1 overflow-hidden flex flex-col leading-tight ${landscape ? 'justify-center gap-1 py-2' : 'gap-0.5 py-1.5'} rounded-xl px-2.5 saloon-plate ${isCurrent ? 'saloon-plate-active' : ''}`}>
+      {landscape ? (
+        <>
+          <div className="flex items-center gap-1.5 min-w-0">
+            {u.isDealer && <DealerChip />}
+            {(() => { const k = blindOf(ctx, ctx.players.findIndex(p => p.isUser)); return k ? <BlindMarker kind={k} /> : null; })()}
+            <span className={nameCls}>{u.name}</span>
+          </div>
+          {status}
+        </>
+      ) : (
+        <div className="flex items-center gap-1.5 min-w-0">
+          {u.isDealer && <DealerChip />}
+          {(() => { const k = blindOf(ctx, ctx.players.findIndex(p => p.isUser)); return k ? <BlindMarker kind={k} /> : null; })()}
+          <span className={nameCls}>{u.name}</span>
+          {status}
+        </div>
+      )}
       <span data-testid="hero-chips" className={`${lg ? 'text-[24px]' : 'text-[20px]'} font-mono font-extrabold text-[#cfe3c6] tabular-nums`}>{money(u.chips)}</span>
       {ctx.handLabel && <span data-testid="hand-label" className={`${lg ? 'text-[15px]' : 'text-[13px]'} font-bold text-[#e9c46a] uppercase line-clamp-2 leading-tight`}>{ctx.handLabel}</span>}
-      {(ctx.winProbability !== null || ctx.potOdds !== null) && !(t.orient === 'landscape' && t.tier === 'sm') && (
+      {(ctx.winProbability !== null || ctx.potOdds !== null) && !(landscape && t.tier === 'sm') && (
         <span className="text-[12px] font-semibold text-[#d8c9a8] flex flex-wrap gap-x-2">
           {ctx.winProbability !== null && <span className="whitespace-nowrap">Win <b className="text-[#9fd49a]">{ctx.winProbability}%</b></span>}
           {ctx.potOdds !== null && <span className="whitespace-nowrap">Pot odds <b className="text-[#a9c7e8]">{ctx.potOdds}%</b></span>}
@@ -645,7 +663,7 @@ export function SaloonTable({ ctx, containerRef }: { ctx: SaloonCtx; containerRe
           </div>
           <div data-testid="side-column" className="shrink-0 flex flex-col justify-between gap-2 py-1.5 pl-1"
             style={{ width: t.sideW, paddingRight: 'max(8px, env(safe-area-inset-right))', paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}>
-            <div data-testid="hero-row" className="flex items-center gap-2">
+            <div data-testid="hero-row" className="flex items-stretch gap-2">
               <HeroStack ctx={ctx} t={t} onOpen={openFan} />
               <HeroPlate ctx={ctx} t={t} cap={captions[ctx.user?.id || '']} />
             </div>

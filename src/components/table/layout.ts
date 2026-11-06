@@ -30,7 +30,7 @@ export function getTokens(w: number, h: number): Tokens {
     seatW: lg ? 176 : 132,
     seatH: lg ? 88 : 70, // includes the last-action caption row
     topBarH: lg ? 56 : portrait ? 52 : 44,
-    sideW: lg ? 340 : w < 760 ? 214 : 236,
+    sideW: lg ? 340 : w < 760 ? 228 : 248,
     card: {
       mini: lg ? { w: 32, h: 45, rank: 14, suit: 18 } : { w: 24, h: 34, rank: 12, suit: 14 },
       seat: lg ? { w: 46, h: 64, rank: 18, suit: 24 } : { w: 36, h: 50, rank: 14, suit: 18 },
